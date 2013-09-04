@@ -4,13 +4,13 @@ from distutils.core import setup
 script=os.path.join('bin', 'gdal_calculate')
 scripts=[script,script+'.cmd']
 
-if 'install' in sys.argv:
+if 'sdist' not in sys.argv:
     if os.name=='nt':del scripts[0]
     else:del scripts[1]
 
 setup(
     name = 'gdal-calculations',
-    version = '0.1',
+    version = '0.1dev',
     description='GDAL calculations',
     author='Luke Pinner',
     author_email='gdal.calculations@maildrop.cc',
