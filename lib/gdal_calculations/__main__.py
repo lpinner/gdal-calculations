@@ -70,10 +70,10 @@ if __name__=='__main__':
     import numpy,tempfile
     from gdal_dataset import Dataset,Env,ArrayDataset,Progress,geometry,gdal
 
+    prog='gdal_calculate'
     try: #Python == 2.7.x
-        raise ImportError
         from argparse import (ArgumentParser,HelpFormatter)
-        argparser=ArgumentParser()
+        argparser=ArgumentParser(prog=prog)
     except ImportError: #python < 2.7, emulate argparse.ArgumentParser
         from optparse import (OptionParser,BadOptionError,HelpFormatter, Option)
         Option.ATTRS.append('required')
@@ -95,15 +95,11 @@ if __name__=='__main__':
                 #Check for required args - i.e. anything without a default
                 for opt in self.option_list[1:]: #Skip --help
                     if getattr(self.values, opt.dest) is None and opt.required:
-                        self.error('%s argument not supplied' % opt)
+                        self.error('argument %s is required' % opt)
 
-        argparser=ArgumentParser()
+        argparser=ArgumentParser(prog=prog)
         argparser.parse_known_args=argparser.parse_args
         argparser.add_argument=argparser.add_option
-
-    class formatter(HelpFormatter): #Just use the doc string as is.
-        def format_help(self):return __doc__
-    argparser.formatter_class=formatter
 
     #Parse command line args.
     ##Some args below originally derived from gdal_calc.py (MIT/X license)
