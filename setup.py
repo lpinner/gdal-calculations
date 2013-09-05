@@ -10,7 +10,7 @@ if 'sdist' not in sys.argv:
 
 setup(
     name = 'gdal-calculations',
-    version = '0.1',
+    version = '0.1dev',
     description='GDAL calculations',
     author='Luke Pinner',
     author_email='gdal.calculations@maildrop.cc',
