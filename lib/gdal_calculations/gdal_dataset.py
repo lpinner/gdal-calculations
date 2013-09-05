@@ -107,8 +107,10 @@ Examples:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-__all__ = [ "Dataset", "Env",
-            "Progress", "Byte",
+__all__ = [ "Env", "Progress",
+            "Dataset", "ArrayDataset",
+            "ClippedDataset", "WarpedDataset",
+            "Block", "Byte",
             "UInt16", "Int16",
             "UInt32", "Int32",
             "Float32", "Float64"
