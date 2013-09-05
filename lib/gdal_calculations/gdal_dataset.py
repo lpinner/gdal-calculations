@@ -17,6 +17,9 @@ To Do:
         Handle different cellsizes?
 
 Examples:
+
+    from gdal_calculations import *
+
     Env.extent = [xmin, ymin, xmax, ymax] # Other acceptable values:
                                           #  'INTERSECT' or 'MINOF' (default)
                                           #  'UNION' or 'MAXOF'
@@ -46,9 +49,11 @@ Examples:
 
     #Or in one go
     #ndvi=(ds2[3]-Float32(ds1[2])/(ds2[3]+Float32(ds1[2]))
-    ndvi=ndvi.save(r'../testdata/ndvi1.tif')
 
-    #If you want to speed things up... use numexpr!
+    #Save the output
+    ndvi=ndvi.save(r'../testdata/ndvi1.tif',options=['compress=LZW','TILED=YES'])
+
+    #If you want to speed things up, use numexpr!
     #but there are a few limitations...
     import numexpr as ne
 
