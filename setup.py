@@ -29,7 +29,7 @@ if 'sdist' not in sys.argv:
 
 setup(
     name = 'gdal-calculations',
-    version = '0.2',
+    version = '0.3dev',
 	license = 'GPL',
 	description=SHORTDESC,
 	long_description=LONGDESC,
