@@ -8,13 +8,13 @@ Author: Luke Pinner
 Contributors: Matt Gregory
 
 Notes:
-          Can handle rasters with different extents and coordinate systems
-          as long as they overlap.
-
-          Cellsizes must be the same.
+          Can handle rasters with different extents,c ellsizes and coordinate systems
+          as long as they overlap. If cellsizes differ, the output cellsize will be
+          that of the leftmost Dataset in the expression.
 
 To Do:
-        Handle different cellsizes?
+          Add environment setting to allow specifying cellsize handling when they
+          differ. i.e. MAXOF, MINOF, number, Dataset
 
 Examples:
 
@@ -260,7 +260,9 @@ class RasterLike(object):
         srs1=osr.SpatialReference(self._srs)
         srs2=osr.SpatialReference(other._srs)
 
-        if Env.reproject and not srs1.IsSame(srs2):
+        reproj=(Env.reproject and not srs1.IsSame(srs2))              #Do we need to reproject?
+        resamp=(self._gt[1],self._gt[5])!=(other._gt[1],other._gt[5]) #Do we need to resample?
+        if  reproj or resamp:
             other=WarpedDataset(other,self._srs, self)
 
         geom1=geometry.GeomFromExtent(self.extent)
@@ -971,8 +973,12 @@ class WarpedDataset(Dataset):
 
         except Exception as e:
             raise RuntimeError('Unable to project on the fly. '+e.message)
-        if warped_ds.GetGeoTransform()==orig_ds.GetGeoTransform():
-            raise RuntimeError('Unable to project on the fly. Make sure all input datasets have projections set.')
+
+        #Disable the following check as this will allow us to use a WarpedDataset to
+        #resample Datasets and creating an AutoCreateWarpedVRT where input srs==output srs
+        #will allways fail the test below...
+        #if warped_ds.GetGeoTransform()==orig_ds.GetGeoTransform():
+        #    raise RuntimeError('Unable to project on the fly. Make sure all input datasets have projections set.')
 
         if snap_ds:warped_ds=self._modify_vrt(warped_ds, orig_ds, snap_ds)
         self._dataset=self._create_simple_VRT(warped_ds,dataset_or_band)
@@ -1104,6 +1110,25 @@ class DatasetStack(Stack):
             self._bands.append(b)
 
 if __name__=='__main__':
+    #Testing
+    gdal.UseExceptions()
+
+    Env.extent='MAXOF'
+    Env.resampling='CUBIC'
+    Env.overwrite=True
+    Env.reproject=True
+    Env.nodata=True
+
+    ds1=Dataset('C:/remotesensing/testdata/landsat_utm50.tif') #25m
+    ds2=Dataset('C:/remotesensing/testdata/landsat_utm50_resampled.tif') #50m
+
+    red=Float32(ds1[2])
+    nir=ds2[3]
+
+    red2=WarpedDataset(red,nir._srs, nir)
+    ndvi=(nir-red)/(nir+red)
+    ndvi=ndvi.save(r'c:/remotesensing/testdata/ndvi1.tif')
+
     #Examples
     gdal.UseExceptions()
 
