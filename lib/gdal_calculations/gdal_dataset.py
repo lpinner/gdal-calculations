@@ -1110,25 +1110,6 @@ class DatasetStack(Stack):
             self._bands.append(b)
 
 if __name__=='__main__':
-    #Testing
-    gdal.UseExceptions()
-
-    Env.extent='MAXOF'
-    Env.resampling='CUBIC'
-    Env.overwrite=True
-    Env.reproject=True
-    Env.nodata=True
-
-    ds1=Dataset('C:/remotesensing/testdata/landsat_utm50.tif') #25m
-    ds2=Dataset('C:/remotesensing/testdata/landsat_utm50_resampled.tif') #50m
-
-    red=Float32(ds1[2])
-    nir=ds2[3]
-
-    red2=WarpedDataset(red,nir._srs, nir)
-    ndvi=(nir-red)/(nir+red)
-    ndvi=ndvi.save(r'c:/remotesensing/testdata/ndvi1.tif')
-
     #Examples
     gdal.UseExceptions()
 
