@@ -8,10 +8,13 @@ Author: Luke Pinner
 Contributors: Matt Gregory
 
 Notes:
-          Can handle rasters with different extents,c ellsizes and coordinate systems
-          as long as they overlap. If cellsizes differ, the output cellsize will be
-          that of the leftmost Dataset in the expression.
-
+       - Can handle rasters with different extents,cellsizes and coordinate systems
+         as long as they overlap. If cellsizes/coordinate systems differ, the output 
+         cellsize/coordinate system will be that of the leftmost Dataset in the expression.
+       - gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are 
+         passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
+       - If numexpr is installed, it can be used to evaluate your expressions, but note 
+         the limitations specified in the examples below.
 To Do:
           Add environment setting to allow specifying cellsize handling when they
           differ. i.e. MAXOF, MINOF, number, Dataset
