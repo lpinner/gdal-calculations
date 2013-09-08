@@ -16,8 +16,7 @@ Notes:
        - If numexpr is installed, it can be used to evaluate your expressions, but note 
          the limitations specified in the examples below.
 To Do:
-          Add environment setting to allow specifying cellsize handling when they
-          differ. i.e. MAXOF, MINOF, number, Dataset
+         Handle warped VRTs as input
 
 Examples:
 
@@ -660,7 +659,7 @@ class Dataset(RasterLike):
 
         if type(fp) is gdal.Dataset:
             self._dataset = fp
-        elif fp is not None:
+        elif fp is not None: #TODO handle warped vrts
             if os.path.exists(fp):
                 self._dataset = gdal.Open(os.path.abspath(fp),*args)
             else:
