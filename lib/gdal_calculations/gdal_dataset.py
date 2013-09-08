@@ -160,6 +160,26 @@ class Env(object):
     tiled=True
 
     @property
+    def cellsize(self):
+        try:return self._cellsize
+        except AttributeError:
+            self._extent='DEFAULT'
+            return self._cellsize
+
+    @cellsize.setter
+    def cellsize(self, value):
+        #raise NotImplementedError('cellsize setting under construction')        
+
+        try:
+            if value.upper() in ['DEFAULT','MINOF','MAXOF']:
+                self._cellsize = value.upper()
+        except AttributeError:
+            try:self._cellsize=[float(n) for n in value] #Is it an iterable
+            except:
+                try:self._cellsize=[float(value),float(value)] #Is it a single value
+                except:raise AttributeError('%s not one of "DEFAULT"|"MINOF"|"MAXOF"|[xsize,ysize]|xysize'%repr(value))
+            
+    @property
     def extent(self):
         try:return self._extent
         except AttributeError:
@@ -175,6 +195,7 @@ class Env(object):
             try:xmin,ymin,xmax,ymax=[float(i) for i in value]
             except: raise AttributeError('%s not one of "MINOF"|"INTERSECT"|"MAXOF"|"UNION"|[xmin,ymin,xmax,ymax]'%repr(value))
             else:self._extent = [xmin,ymin,xmax,ymax]
+
 
     @property
     def resampling(self):
@@ -263,13 +284,39 @@ class RasterLike(object):
         srs1=osr.SpatialReference(self._srs)
         srs2=osr.SpatialReference(other._srs)
 
-        reproj=(Env.reproject and not srs1.IsSame(srs2))              #Do we need to reproject?
-        resamp=(self._gt[1],self._gt[5])!=(other._gt[1],other._gt[5]) #Do we need to resample?
-        if  reproj or resamp:
+        #Do we need to reproject?
+        reproj=(Env.reproject and not srs1.IsSame(srs2))              
+        if  reproj:
             other=WarpedDataset(other,self._srs, self)
 
-        geom1=geometry.GeomFromExtent(self.extent)
-        geom2=geometry.GeomFromExtent(other.extent)
+        #Do we need to resample?
+        dataset1=self
+        dataset2=other
+        if Env.cellsize=='MAXOF':
+            px=max(self._gt[1],other._gt[1])
+            py=max(abs(self._gt[5]),abs(other._gt[5]))
+            if (self._gt[1],abs(self._gt[5]))!=(px,py):
+                dataset1=WarpedDataset(self,self._srs, self, (px,py))
+            if (other._gt[1],abs(other._gt[5]))!=(px,py):
+                dataset2=WarpedDataset(other,self._srs, self, (px,py))
+        elif Env.cellsize=='MINOF':
+            px=min(self._gt[1],other._gt[1])
+            py=min(abs(self._gt[5]),abs(other._gt[5]))
+            if (self._gt[1],abs(self._gt[5]))!=(px,py):
+                dataset1=WarpedDataset(self,self._srs, self, (px,py))
+            if (other._gt[1],abs(other._gt[5]))!=(px,py):
+                dataset2=WarpedDataset(other,self._srs, self, (px,py))
+        elif Env.cellsize!='DEFAULT':
+            if (other._gt[1],other._gt[5])!=(self._gt[1],self._gt[5]):
+                dataset2=WarpedDataset(other,self._srs, self)
+        else:
+            if (self._gt[1],abs(self._gt[5]))!=tuple(Env.cellsize):
+                dataset1=WarpedDataset(self,self._srs, self, Env.cellsize)
+            if (other._gt[1],abs(other._gt[5]))!=tuple(Env.cellsize):
+                dataset2=WarpedDataset(other,self._srs, self, Env.cellsize)
+
+        geom1=geometry.GeomFromExtent(dataset1.extent)
+        geom2=geometry.GeomFromExtent(dataset2.extent)
 
         if not geom1.Intersects(geom2):
             raise RuntimeError('Input datasets do not overlap')
@@ -281,10 +328,8 @@ class RasterLike(object):
                 ext=self.__maxextent__(other)
         except AttributeError: pass #ext is [xmin,ymin,xmax,ymax]
 
-        if self.extent!=ext: dataset1=ClippedDataset(self,ext)
-        else: dataset1=self
-        if other.extent!=ext: dataset2=ClippedDataset(other,ext)
-        else: dataset2=other
+        if self.extent!=ext: dataset1=ClippedDataset(dataset1,ext)
+        if other.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
 
         return dataset1,dataset2
 
@@ -956,7 +1001,7 @@ class ConvertedDataset(Dataset):
 
 class WarpedDataset(Dataset):
 
-    def __init__(self,dataset_or_band, wkt_srs, snap_ds=None):
+    def __init__(self,dataset_or_band, wkt_srs, snap_ds=None, snap_cellsize=None):
 
         use_exceptions=gdal.GetUseExceptions()
         gdal.UseExceptions()
@@ -983,7 +1028,7 @@ class WarpedDataset(Dataset):
         #if warped_ds.GetGeoTransform()==orig_ds.GetGeoTransform():
         #    raise RuntimeError('Unable to project on the fly. Make sure all input datasets have projections set.')
 
-        if snap_ds:warped_ds=self._modify_vrt(warped_ds, orig_ds, snap_ds)
+        if snap_ds:warped_ds=self._modify_vrt(warped_ds, orig_ds, snap_ds, snap_cellsize)
         self._dataset=self._create_simple_VRT(warped_ds,dataset_or_band)
 
         if not use_exceptions:gdal.DontUseExceptions()
@@ -1015,7 +1060,7 @@ class WarpedDataset(Dataset):
         self.__write_vsimem__(self._simple_fn,vrt)
         return gdal.Open(self._simple_fn)
 
-    def _modify_vrt(self, warp_ds, orig_ds, snap_ds):
+    def _modify_vrt(self, warp_ds, orig_ds, snap_ds, snap_cellsize):
         '''Modify the warped VRT to control pixel size and extent'''
 
         orig_gt=orig_ds.GetGeoTransform()
@@ -1033,11 +1078,18 @@ class WarpedDataset(Dataset):
         warp_ext=geometry.GeoTransformToExtent(warp_gt,warp_cols,warp_rows)
         warp_ext=[warp_ext[1][0],warp_ext[1][1],warp_ext[3][0],warp_ext[3][1]]
 
-        snap_gt=snap_ds._gt
-        snap_cols = snap_ds._x_size
-        snap_rows = snap_ds._y_size
-        snap_px=snap_gt[1]
-        snap_py=abs(snap_gt[5])
+        snap_gt=list(snap_ds._gt)
+        if snap_cellsize:
+            snap_px,snap_py=snap_cellsize
+            snap_gt[1]=snap_px
+            snap_gt[5]=-snap_px
+            snap_cols = int(snap_ds._gt[1]/snap_px*snap_ds._x_size)
+            snap_rows = int(abs(snap_ds._gt[5])/snap_py*snap_ds._y_size)
+        else:
+            snap_px=snap_gt[1]
+            snap_py=abs(snap_gt[5])
+            snap_cols = snap_ds._x_size
+            snap_rows = snap_ds._y_size
         snap_ext=geometry.GeoTransformToExtent(snap_gt,snap_cols,snap_rows)
         snap_ext=[snap_ext[1][0],snap_ext[1][1],snap_ext[3][0],snap_ext[3][1]]
 
