@@ -16,7 +16,6 @@ Notes:
        - If numexpr is installed, it can be used to evaluate your expressions, but note 
          the limitations specified in the examples below.
 To Do:
-         Handle warped VRTs as input
 
 Examples:
 
@@ -659,7 +658,7 @@ class Dataset(RasterLike):
 
         if type(fp) is gdal.Dataset:
             self._dataset = fp
-        elif fp is not None: #TODO handle warped vrts
+        elif fp is not None:
             if os.path.exists(fp):
                 self._dataset = gdal.Open(os.path.abspath(fp),*args)
             else:
@@ -982,6 +981,21 @@ class ConvertedDataset(Dataset):
             node=getnodes(vrtbandnodes[band], gdal.CXT_Attribute, 'band')[0]
             vrtbandnodes[band][node][2][1]=str(i+1)
             vrttree.insert(key,vrtbandnodes[band])
+
+        #Handle warped VRTs
+        wo=getnodes(vrttree, gdal.CXT_Element, 'GDALWarpOptions')
+        if wo:
+            wo=wo[0]
+            bl=getnodes(vrttree[wo], gdal.CXT_Element, 'BandList')[0]
+            warpbandnodes=getnodes(vrttree[wo][bl], gdal.CXT_Element, 'BandMapping',False)
+            warpbandkeys=getnodes(vrttree[wo][bl], gdal.CXT_Element, 'BandMapping')
+            for key in reversed(warpbandkeys): del vrttree[wo][bl][key]#Reverse so we can delete from the end
+            for i,band in enumerate(dataset_or_band._bands):
+                src=getnodes(warpbandnodes[band], gdal.CXT_Attribute, 'src')[0]
+                dst=getnodes(warpbandnodes[band], gdal.CXT_Attribute, 'dst')[0]
+                warpbandnodes[band][src][2][1]=str(band+1)
+                warpbandnodes[band][dst][2][1]=str(i+1)
+                vrttree[wo][bl].insert(key,warpbandnodes[band])
 
         vrtxml=gdal.SerializeXMLTree(vrttree)
 
