@@ -44,51 +44,59 @@ import test_py_scripts
 
 ###############################################################################
 # Create some test data
-##def setup():
-##    import numpy
-##    from osgeo import gdal_array
-##
-##    #Raster (filepath,dataset) list
-##    raster_list=[]
-##
-##    #Raster 0
-##    filename='/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
-##
-##    #Raster size
-##    nrows=512
-##    ncols=512
-##    nbands=7
-##
-##    # data types
-##    gdal_datatype = gdal.GDT_UInt16
-##    np_datatype = gdal_array.GDALTypeCodeToNumericTypeCode(gdal_datatype)
-##
-##    driver = gdal.GetDriverByName( "GTiff" )
-##    dst_ds = driver.Create( filename, ncols, nrows, nbands, gdal_datatype )
-##
-##    #Coordinates of the lower left corner of the image
-##    #in same units as spatial reference
-##    xllcorner=147.2
-##    yllcorner=-34.54
-##
-##    #Cellsize in same units as spatial reference
-##    cellsize=0.01
-##
-##    dst_ds.SetGeoTransform( [ xllcorner, cellsize, 0, yllcorner, 0, -cellsize ] )
-##    srs = osr.SpatialReference()
-##    srs.SetWellKnownGeogCS("WGS84")
-##    dst_ds.SetProjection( srs.ExportToWkt() )
-##
-##    raster = numpy.ones((nrows,ncols)).astype(np_datatype )
-##    for band in range(nbands):
-##        dst_ds.GetRasterBand(band+1).WriteArray( raster+band )
-##
-##    # close the dataset
-##    dst_ds = None
-##    raster_list.append([filename,gdal.Open(filename)])
-##
-##
-##    return [1]#raster_list
+def setup():
+    import numpy
+    from osgeo import gdal_array
+
+    #Raster (filepath,dataset) list
+    raster_list=[]
+
+    #Raster 0
+    filenames=['/vsimem/%s.tif'%tempfile._RandomNameSequence().next(),
+               '/vsimem/%s.tif'%tempfile._RandomNameSequence().next(),
+               '/vsimem/%s.tif'%tempfile._RandomNameSequence().next(),
+               '/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
+              ]
+
+    #Raster size
+    nrows=512
+    ncols=512
+    nbands=4
+
+    # data types
+    gdal_datatype = gdal.GDT_UInt16
+    np_datatype = gdal_array.GDALTypeCodeToNumericTypeCode(gdal_datatype)
+
+    for filename in filenames:
+        driver = gdal.GetDriverByName( "GTiff" )
+        dst_ds = driver.Create( filename, ncols, nrows, nbands, gdal_datatype )
+    
+        #Coordinates of the lower left corner of the image
+        #in same units as spatial reference
+        xllcorner=147.5
+        yllcorner=-34.5
+    
+        #Cellsize in same units as spatial reference
+        cellsize=0.01
+    
+        dst_ds.SetGeoTransform( [ xllcorner, cellsize, 0, yllcorner, 0, -cellsize ] )
+        srs = osr.SpatialReference()
+        srs.SetWellKnownGeogCS("WGS84")
+        dst_ds.SetProjection( srs.ExportToWkt() )
+    
+        #raster = numpy.ones((nrows,ncols)).astype(np_datatype )
+        raster = numpy.mgrid[1:nrows+1,1:ncols+1]
+        for band in range(nbands):
+            dst_ds.GetRasterBand(band+1).WriteArray( raster+band )
+        del raster
+        
+        # close the dataset
+        dst_ds.FlushCache()
+        dst_ds = None
+        
+        raster_list.append([filename,gdal.Open(filename)])
+
+    return raster_list
 
 ###############################################################################
 # Test import
@@ -180,8 +188,13 @@ def test_gdal_calculations_py_2():
 def test_gdal_calculations_py_3():
     try:
         import gdal_calculations
-        raster_list=[1]
+        raster_list=setup() #
         assert len(raster_list)>0,'len(raster_list)==0'
+        f,d=raster_list[0]
+        dsf=gdal_calculations.Dataset(f)
+        dsd=gdal_calculations.Dataset(d)
+        dsf=None
+        dsd=None
         return 'success'
     except ImportError:
         return 'skip'
@@ -203,4 +216,4 @@ if __name__ == '__main__':
     gdaltest.setup_run( 'test_gdal_calculations_py' )
     gdaltest.run_tests( gdaltest_list )
     gdaltest.summarize()
-
+    del raster_list
