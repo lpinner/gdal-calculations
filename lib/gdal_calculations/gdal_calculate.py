@@ -5,19 +5,19 @@ Purpose: Perform simple tiled raster calculations (AKA "map algebra")
          from the commandline
 
 Notes:
-        - Can handle rasters with different extents,cellsizes and coordinate 
-          systems as long as they overlap. If /coordinate systems differ, the 
-          output cellsize/coordinate system will be that of the leftmost Dataset 
+        - Can handle rasters with different extents,cellsizes and coordinate
+          systems as long as they overlap. If /coordinate systems differ, the
+          output cellsize/coordinate system will be that of the leftmost Dataset
           in the expression.
-        - GDALDataset and RasterBand and numpy method and attribute calls are 
-          passed down to the underlying GDALDataset, GDALRasterBand and ndarray 
+        - GDALDataset and RasterBand and numpy method and attribute calls are
+          passed down to the underlying GDALDataset, GDALRasterBand and ndarray
           objects.
-        - If numexpr is installed, gdal_calculate will try to use numexpr.evaluate 
-          to process the expression as it is much faster. However, numexpr 
-          expressions are very limited: tiled processing, on-the-fly reprojection, 
-          extent clipping/snapping, method/function calls and subscripting are 
+        - If numexpr is installed, gdal_calculate will try to use numexpr.evaluate
+          to process the expression as it is much faster. However, numexpr
+          expressions are very limited: tiled processing, on-the-fly reprojection,
+          extent clipping/snapping, method/function calls and subscripting are
           not supported.
- 
+
 Required parameters:
      --calc     : calculation in numpy syntax, rasters specified as using
                   any legal python variable name syntax, band numbers are
@@ -74,9 +74,14 @@ Example:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
+import numpy,tempfile
+from osgeo import gdal
+from gdal_dataset import *
+from environment import *
+from conversions import *
+import geometry
+
 def main():
-    import numpy,tempfile
-    from gdal_dataset import Dataset,Env,ArrayDataset,Progress,geometry,gdal
 
     prog='gdal_calculate'
     try: #Python == 2.7.x

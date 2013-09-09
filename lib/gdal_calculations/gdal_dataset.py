@@ -9,11 +9,11 @@ Contributors: Matt Gregory
 
 Notes:
        - Can handle rasters with different extents,cellsizes and coordinate systems
-         as long as they overlap. If cellsizes/coordinate systems differ, the output 
+         as long as they overlap. If cellsizes/coordinate systems differ, the output
          cellsize/coordinate system will be that of the leftmost Dataset in the expression.
-       - gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are 
+       - gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are
          passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
-       - If numexpr is installed, it can be used to evaluate your expressions, but note 
+       - If numexpr is installed, it can be used to evaluate your expressions, but note
          the limitations specified in the examples below.
 To Do:
 
@@ -108,158 +108,17 @@ Examples:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-__all__ = [ "Env", "Progress",
-            "Dataset", "ArrayDataset",
-            "ClippedDataset", "WarpedDataset",
-            "Block", "Byte",
-            "UInt16", "Int16",
-            "UInt32", "Int32",
-            "Float32", "Float64"
+__all__ = [ "Dataset", "ArrayDataset",
+            "ConvertedDataset", "ClippedDataset",
+            "WarpedDataset"
           ]
 
 import numpy as np
 from osgeo import gdal, gdal_array, osr
 import os, tempfile, operator, itertools, sys
+
+from environment import *
 import geometry
-
-# Processing environment
-class Env(object):
-    ''' Class for setting various environment properties
-        Currently the following properties are supported:
-            extent
-              - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
-              - Default = "MINOF"
-            nodata
-              - handle nodata using masked arrays - True/False
-              - Default = False
-            overwrite
-              - overwrite if required - True/False
-              - Default = False
-            reproject
-              - reproject if required - True/False
-              - datasets are projected to the SRS of the first input dataset in an expression
-              - Default = False
-            resampling
-              - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
-              - Default = "NEAREST"
-            tempdir
-              - temporary working directory
-              - Default = tempfile.tempdir
-            tiled
-              - use tiled processing - True/False
-              - Default = True
-    '''
-
-    #Properties
-    nodata=False
-    overwrite=False
-    progress=False
-    reproject=False
-    tiled=True
-
-    @property
-    def cellsize(self):
-        try:return self._cellsize
-        except AttributeError:
-            self._extent='DEFAULT'
-            return self._cellsize
-
-    @cellsize.setter
-    def cellsize(self, value):
-        #raise NotImplementedError('cellsize setting under construction')        
-
-        try:
-            if value.upper() in ['DEFAULT','MINOF','MAXOF']:
-                self._cellsize = value.upper()
-        except AttributeError:
-            try:self._cellsize=[float(n) for n in value] #Is it an iterable
-            except:
-                try:self._cellsize=[float(value),float(value)] #Is it a single value
-                except:raise AttributeError('%s not one of "DEFAULT"|"MINOF"|"MAXOF"|[xsize,ysize]|xysize'%repr(value))
-            
-    @property
-    def extent(self):
-        try:return self._extent
-        except AttributeError:
-            self._extent='MINOF'
-            return self._extent
-
-    @extent.setter
-    def extent(self, value):
-        try:
-            if value.upper() in ['MINOF','MAXOF','INTERSECT','UNION']:
-                self._extent = value.upper()
-        except AttributeError:
-            try:xmin,ymin,xmax,ymax=[float(i) for i in value]
-            except: raise AttributeError('%s not one of "MINOF"|"INTERSECT"|"MAXOF"|"UNION"|[xmin,ymin,xmax,ymax]'%repr(value))
-            else:self._extent = [xmin,ymin,xmax,ymax]
-
-
-    @property
-    def resampling(self):
-        try:return self._resampling
-        except AttributeError:
-            self._resampling=gdal.GRA_NearestNeighbour
-            return self._resampling
-
-    @resampling.setter
-    def resampling(self, value):
-        _lut={'AVERAGE': gdal.GRA_Average,
-              'BILINEAR':gdal.GRA_Bilinear,
-              'CUBIC':gdal.GRA_Cubic,
-              'CUBICSPLINE':gdal.GRA_CubicSpline,
-              'LANCZOS':gdal.GRA_Lanczos,
-              'MODE':gdal.GRA_Mode,
-              'NEAREST':gdal.GRA_NearestNeighbour}
-        try:value=value.upper()
-        except:pass
-        if value in _lut:  #string
-            self._resampling=_lut[value]
-        elif value in _lut.values(): #gdal.GRA_*
-            self._resampling=value
-        else:raise AttributeError('%s not one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*'%repr(value))
-
-    @property
-    def tempdir(self):
-        return tempfile.tempdir
-
-    @tempdir.setter
-    def tempdir(self, value):
-        if not os.path.isdir(value):raise RuntimeError('%s is not a directory'%value)
-        tempfile.tempdir=value
-
-Env=Env()
-
-class Progress(object):
-    def __init__(self,total=0):
-        self.total=float(total)
-        self.progress=0
-        self.enabled=total>0
-        if self.enabled:
-            gdal.TermProgress_nocb(0)
-
-    def update_progress(self):
-        if self.enabled:
-            self.progress+=1.0
-            gdal.TermProgress_nocb(self.progress/self.total)
-
-Env.progress=Progress()
-
-# Type conversion helper functions
-def Byte(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_Byte)
-def UInt16(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_UInt16)
-def Int16(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_Int16)
-def UInt32(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_UInt32)
-def Int32(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_Int32)
-def Float32(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_Float32)
-def Float64(dataset_or_band):
-    return ConvertedDataset(dataset_or_band, gdal.GDT_Float64)
 
 # Calculations classes
 class Block(object):
@@ -283,7 +142,7 @@ class RasterLike(object):
         srs2=osr.SpatialReference(other._srs)
 
         #Do we need to reproject?
-        reproj=(Env.reproject and not srs1.IsSame(srs2))              
+        reproj=(Env.reproject and not srs1.IsSame(srs2))
         if  reproj:
             other=WarpedDataset(other,self._srs, self)
 
