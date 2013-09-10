@@ -356,7 +356,7 @@ def test_gdal_calculations_py_8():
         out=ds1+ds2
         assert approx_equal(out.extent,ds2.extent),'Env.extent="MAXOF" and out.extent!=ds2.extent'
         out=ds1+ds2+ds3
-        assert approx_equal(out.extent,ds3.extent),'Env.extent="MINOF" and out.extent!=ds3.extent'
+        assert approx_equal(out.extent,ds3.extent),'Env.extent="MAXOF" and out.extent!=ds3.extent'
 
         ds1,ds2,ds3,ds4,out=None,None,None,None,None
         return 'success'

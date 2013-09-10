@@ -184,8 +184,8 @@ class RasterLike(object):
                 ext=self.__maxextent__(other)
         except AttributeError: pass #ext is [xmin,ymin,xmax,ymax]
 
-        if self.extent!=ext: dataset1=ClippedDataset(dataset1,ext)
-        if other.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
+        if dataset1.extent!=ext: dataset1=ClippedDataset(dataset1,ext)
+        if dataset2.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
 
         return dataset1,dataset2
 
@@ -704,7 +704,8 @@ class ClippedDataset(Dataset):
         bands=dataset_or_band._bands
         gt = dataset_or_band._gt
         xoff,yoff,clip_xsize,clip_ysize=self._extent_to_offsets(extent,gt)
-        ulx,uly=geometry.PixelToMap(xoff,yoff,gt)
+        #ulx,uly=geometry.PixelToMap(xoff,yoff,gt)
+        ulx,uly=extent[0],extent[3]
         clip_gt=(ulx,gt[1],gt[2],uly,gt[4],gt[5])
 
         #Temp in memory VRT file
