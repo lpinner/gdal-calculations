@@ -720,6 +720,11 @@ class ClippedDataset(Dataset):
         #use gdals built-in XML handling to reduce external dependencies
         vrttree = gdal.ParseXMLString(vrtxml)
         getnodes=self.getnodes
+        #Handle warped VRTs
+        wo=getnodes(vrttree, gdal.CXT_Element, 'GDALWarpOptions')
+        if wo:vrttree=self._create_simple_VRT(orig_ds,bands)
+
+
         rasterXSize = getnodes(vrttree, gdal.CXT_Attribute, 'rasterXSize')[0]
         rasterYSize = getnodes(vrttree, gdal.CXT_Attribute, 'rasterYSize')[0]
         GeoTransform = getnodes(vrttree, gdal.CXT_Element, 'GeoTransform')[0]
@@ -806,6 +811,34 @@ class ClippedDataset(Dataset):
         if not use_exceptions:gdal.DontUseExceptions()
 
         Dataset.__init__(self)
+
+    def _create_simple_VRT(self,warped_ds,bands):
+        ''' Create a simple VRT XML string from a warped VRT (GDALWarpOptions)'''
+
+        vrt=[]
+        vrt.append('<VRTDataset rasterXSize="%s" rasterYSize="%s">' % (warped_ds.RasterXSize,warped_ds.RasterYSize))
+        vrt.append('  <SRS>%s</SRS>' % warped_ds.GetProjection())
+        vrt.append('  <GeoTransform>%s</GeoTransform>' % ', '.join(map(str,warped_ds.GetGeoTransform())))
+        for i,band in enumerate(bands):
+            rb=warped_ds.GetRasterBand(band+1) #gdal band index start at 1
+            nodata=rb.GetNoDataValue()
+            path=warped_ds.GetDescription()
+            rel=not os.path.isabs(path)
+            vrt.append('  <VRTRasterBand dataType="%s" band="%s">' % (gdal.GetDataTypeName(rb.DataType), i+1))
+            vrt.append('    <SimpleSource>')
+            vrt.append('      <SourceFilename relativeToVRT="%s">%s</SourceFilename>' % (int(rel),path))
+            vrt.append('      <SourceBand>%s</SourceBand>'%(band+1))
+            vrt.append('      <SrcRect xOff="0" yOff="0" xSize="%s" ySize="%s" />' % (warped_ds.RasterXSize,warped_ds.RasterYSize))
+            vrt.append('      <DstRect xOff="0" yOff="0" xSize="%s" ySize="%s" />' % (warped_ds.RasterXSize,warped_ds.RasterYSize))
+            vrt.append('    </SimpleSource>')
+            if nodata is not None: # 0 is a valid value
+                vrt.append('    <NoDataValue>%s</NoDataValue>' % nodata)
+            vrt.append('  </VRTRasterBand>')
+        vrt.append('</VRTDataset>')
+
+        vrt='\n'.join(vrt)
+        vrttree=gdal.ParseXMLString(vrt)
+        return vrttree
 
     def _extent_to_offsets(self,extent,gt):
         xoff,yoff=geometry.MapToPixel(extent[0],extent[3],gt) #xmin,ymax in map coords
