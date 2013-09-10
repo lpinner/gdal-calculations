@@ -46,7 +46,7 @@ def test_gdal_calculations_py_1():
     ''' Test imports '''
     try:
         import gdal_calculations
-        from gdal_calculations import *
+        from gdal_calculations import Dataset
         return 'success'
     except ImportError:
         return 'skip'
@@ -357,6 +357,15 @@ def test_gdal_calculations_py_8():
         assert approx_equal(out.extent,ds2.extent),'Env.extent="MAXOF" and out.extent!=ds2.extent'
         out=ds1+ds2+ds3
         assert approx_equal(out.extent,ds3.extent),'Env.extent="MAXOF" and out.extent!=ds3.extent'
+
+        #specified extent
+        Env.extent=[147.55, -35.45, 148.45, -34.55]  
+        out=ds1+ds2
+        assert approx_equal(out.extent,Env.extent),'Env.extent=%s and out.extent==%s'%(Env.extent,out.extent)
+        out=ds1+ds2
+        out2=out+ds3
+        assert approx_equal(out.extent,Env.extent),'Env.extent=%s and out.extent==%s'%(Env.extent,out.extent)
+
 
         ds1,ds2,ds3,ds4,out=None,None,None,None,None
         return 'success'
