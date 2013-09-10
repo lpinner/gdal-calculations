@@ -30,6 +30,7 @@ __all__ = [ "Byte","UInt16","Int16",
             "UInt32","Int32",
             "Float32","Float64"]
 
+from osgeo import gdal
 from gdal_dataset import ConvertedDataset
 
 # Type conversion helper functions

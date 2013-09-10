@@ -7,15 +7,15 @@ Purpose: GDAL Dataset and Band abstraction for simple tiled raster calculations
 Author: Luke Pinner
 Contributors: Matt Gregory
 
-Notes:
-       - Can handle rasters with different extents,cellsizes and coordinate systems
+Notes: - Can handle rasters with different extents,cellsizes and coordinate systems
          as long as they overlap. If cellsizes/coordinate systems differ, the output
          cellsize/coordinate system will be that of the leftmost Dataset in the expression.
        - gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are
          passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
        - If numexpr is installed, it can be used to evaluate your expressions, but note
          the limitations specified in the examples below.
-To Do:
+
+To Do: - Add snap raster functionality
 
 Examples:
 
@@ -117,7 +117,6 @@ import numpy as np
 from osgeo import gdal, gdal_array, osr
 import os, tempfile, operator, itertools, sys
 
-from environment import *
 import geometry
 
 # Calculations classes
@@ -142,9 +141,10 @@ class RasterLike(object):
         srs2=osr.SpatialReference(other._srs)
 
         #Do we need to reproject?
-        reproj=(Env.reproject and not srs1.IsSame(srs2))
-        if  reproj:
-            other=WarpedDataset(other,self._srs, self)
+        if not srs1.IsSame(srs2):
+            if  Env.reproject:
+                other=WarpedDataset(other,self._srs, self)
+            else:raise RuntimeError('Coordinate systems differ and Env.reproject==False')
 
         #Do we need to resample?
         dataset1=self
@@ -166,11 +166,9 @@ class RasterLike(object):
         elif Env.cellsize!='DEFAULT':
             if (other._gt[1],other._gt[5])!=(self._gt[1],self._gt[5]):
                 dataset2=WarpedDataset(other,self._srs, self)
-        else:
-            if (self._gt[1],abs(self._gt[5]))!=tuple(Env.cellsize):
-                dataset1=WarpedDataset(self,self._srs, self, Env.cellsize)
-            if (other._gt[1],abs(other._gt[5]))!=tuple(Env.cellsize):
-                dataset2=WarpedDataset(other,self._srs, self, Env.cellsize)
+        else: #Env.cellsize=='DEFAULT'
+            if (other._gt[1],abs(other._gt[5]))!=(self._gt[1],abs(self._gt[5])):
+                dataset2=WarpedDataset(other,self._srs, self, (self._gt[1],abs(self._gt[5])))
 
         geom1=geometry.GeomFromExtent(dataset1.extent)
         geom2=geometry.GeomFromExtent(dataset2.extent)
@@ -196,14 +194,25 @@ class RasterLike(object):
         return [ext[1][0],ext[1][1],ext[3][0],ext[3][1]]
 
     def __minextent__(self,other):
-        ext1=self.extent
-        ext2=geometry.SnapExtent(other.extent, other._gt, ext1, self._gt)
-        return geometry.MinExtent(ext1,ext2)
+        minext=geometry.MinExtent(self.extent,other.extent)
+        if not Env.snap_dataset:return minext
+        else:
+            minext=geometry.SnapExtent(minext, Env.snap)
+            return minext
+
+##        ext1=self.extent
+##        ext2=geometry.SnapExtent2(other.extent, other._gt, ext1, self._gt)
+##        return geometry.MinExtent(ext1,ext2)
 
     def __maxextent__(self,other):
-        ext1=self.extent
-        ext2=geometry.SnapExtent(other.extent, other._gt, ext1, self._gt)
-        return geometry.MaxExtent(ext1,ext2)
+        maxext=geometry.MaxExtent(self.extent,other.extent)
+        if not Env.snap_dataset:return maxext
+        else:
+            maxext=geometry.SnapExtent(maxext, Env.snap)
+            return maxext
+##        ext1=self.extent
+##        ext2=geometry.SnapExtent2(other.extent, other._gt, ext1, self._gt)
+##        return geometry.MaxExtent(ext1,ext2)
 
     def getnodes(self, root, nodetype, name, index=True):
         '''Function for handling serialised VRT XML'''
@@ -314,12 +323,19 @@ class RasterLike(object):
                 else:nodata=self._nodata
 
                 data=getattr(data,attr)(*args,**kwargs)
-                datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-                if datatype is None:raise RuntimeError('Unsupported operation: %s'%attr)
-                tmpds=TemporaryDataset(self._x_size,self._y_size,self._nbands,
-                                       datatype,self._srs,self._gt, nodata)
+                if data.shape==(self._y_size,self._x_size):
+                    datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
+                    if datatype is None:
+                        #datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.dtype.type)
+                        #Work around numexpr issue #112 - http://code.google.com/p/numexpr/issues/detail?id=112
+                        #until http://trac.osgeo.org/gdal/ticket/5223 is implemented.
+                        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.view(str(data.dtype)).dtype.type)
+                    if datatype is None:raise RuntimeError('Unsupported datatype (%s) returned by %s'%(str(data.dtype), str(attr)))
+                    tmpds=TemporaryDataset(self._x_size,self._y_size,self._nbands,
+                                           datatype,self._srs,self._gt, nodata)
 
-                tmpds.write_data(data, 0, 0)
+                    tmpds.write_data(data, 0, 0)
+                else:return data
 
             tmpds.FlushCache()
             Env.progress.update_progress()
@@ -726,14 +742,18 @@ class ClippedDataset(Dataset):
             #if not int(node[sourcekey][sourceband][2][1])-1 in bands:continue
             if not int(node[bandnum][2][1])-1 in bands:continue
 
-            NoDataValue=getnodes(node, gdal.CXT_Element, 'NoDataValue')[0]
-            nodata=node[NoDataValue][2][1]
-            node[NoDataValue][2][1]='0' #if clipping results in a bigger XSize/YSize, gdal initialises with 0
+            try:
+                NoDataValue=getnodes(node, gdal.CXT_Element, 'NoDataValue')[0]
+                nodata=node[NoDataValue][2][1]
+                node[NoDataValue][2][1]='0' #if clipping results in a bigger XSize/YSize, gdal initialises with 0
+            except IndexError:nodata='0' #pass
+
             for source in ['SimpleSource','ComplexSource','AveragedSource','KernelFilteredSource']:
                 try:
                     sourcekey=getnodes(node, gdal.CXT_Element, source)[0]
                     break
                 except IndexError:pass
+
             if source=='SimpleSource':node[sourcekey][1]='ComplexSource' #so the <NODATA> element can be used
             sourcefilename=getnodes(node[sourcekey], gdal.CXT_Element, 'SourceFilename')[0]
             relativeToVRT=getnodes(node[sourcekey][sourcefilename], gdal.CXT_Attribute, 'relativeToVRT')[0]
@@ -791,7 +811,7 @@ class ClippedDataset(Dataset):
         xmax,ymin=geometry.MapToPixel(extent[2],extent[1],gt) #
         xsize=xmax-xoff
         ysize=ymin-yoff #Pixel coords start from upper left
-        return (int(xoff),int(yoff),int(xsize+0.5),int(ysize+0.5))
+        return (int(xoff+0.5),int(yoff+0.5),int(xsize+0.5),int(ysize+0.5))
 
     def __del__(self):
         self._dataset.GetDriver().Delete(self._dataset.GetDescription())
@@ -1035,6 +1055,8 @@ class DatasetStack(Stack):
             d=Dataset(f)
             b=d.GetRasterBand(band)
             self._bands.append(b)
+
+from environment import Env,Progress #Important that this is at the end, cyclic imports...
 
 if __name__=='__main__':
     #Examples

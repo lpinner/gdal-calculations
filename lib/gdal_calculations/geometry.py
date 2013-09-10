@@ -399,6 +399,17 @@ def SceneCentre(gt,cols,rows):
     return x,y
 
 def SnapExtent(in_ext,in_gt,snap_ext,snap_gt):
+    "Returns a given extent snapped to the passed raster"
+
+    px,py = snap_gt[1],abs(snap_gt[5])
+    xmin = round(float(in_ext[0]) / px) * px
+    ymin = round(float(in_ext[1]) / py) * py
+    xmax = round(float(in_ext[2]) / px) * px
+    ymax = round(float(in_ext[3]) / py) * py
+    return [xmin,ymin,xmax,ymax]
+
+
+def SnapExtent2(in_ext,in_gt,snap_ext,snap_gt):
     '''Snap in_ext to snap_ext
 
         @type in_ext:  C{tuple/list}
