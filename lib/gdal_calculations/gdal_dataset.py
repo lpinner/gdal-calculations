@@ -117,6 +117,7 @@ import numpy as np
 from osgeo import gdal, gdal_array, osr
 import os, tempfile, operator, itertools, sys
 
+from environment import Env,Progress
 import geometry
 
 # Calculations classes
@@ -728,7 +729,7 @@ class ClippedDataset(Dataset):
         vrttree[rasterYSize][2][1]=str(clip_ysize)
         vrttree[GeoTransform][2][1]='%f, %f, %f, %f, %f, %f'%clip_gt
 
-        #Loop through bands
+        #Loop through bands #TODO Handle warped VRTs
         vrtbandnodes=getnodes(vrttree, gdal.CXT_Element, 'VRTRasterBand',False)
         vrtbandkeys=getnodes(vrttree, gdal.CXT_Element, 'VRTRasterBand')
         for key in reversed(vrtbandkeys): del vrttree[key]#Reverse so we can delete from the end
@@ -1055,8 +1056,6 @@ class DatasetStack(Stack):
             d=Dataset(f)
             b=d.GetRasterBand(band)
             self._bands.append(b)
-
-from environment import Env,Progress #Important that this is at the end, cyclic imports...
 
 if __name__=='__main__':
     #Examples

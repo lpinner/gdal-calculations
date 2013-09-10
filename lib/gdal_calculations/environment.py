@@ -28,10 +28,10 @@ Author: Luke Pinner
 #-------------------------------------------------------------------------------
 __all__ = [ "Env", "Progress"]
 
+import sys,os,tempfile
 import numpy as np
 from osgeo import gdal
-import tempfile
-from gdal_dataset import RasterLike
+#from gdal_dataset import RasterLike
 
 # Processing environment
 class Env(object):
@@ -148,12 +148,13 @@ class Env(object):
     def snap_dataset(self):
         try:return self._snap_dataset
         except AttributeError:
-            self._snap_dataset=''
+            self._snap_dataset=False
             return self._snap_dataset
 
     @snap_dataset.setter
     def snap_dataset(self, value):
-        if not isinstance(gdal_dataset.RasterLike,value):raise RuntimeError('%s is not a Dataset/Band object'%value)
+        try:a=value._gt #Instead of cyclic import to test isinstance(RasterLike,value)
+        except:raise RuntimeError('%s is not a Dataset/Band object'%value)
         self._snap_dataset=value
 
     @property

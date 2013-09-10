@@ -58,7 +58,7 @@ def test_gdal_calculations_py_1():
 def test_gdal_calculations_py_2():
     ''' Test environment getting/setting '''
     try:
-        from gdal_calculations import Env
+        from gdal_calculations import Env,Dataset
 
         #Get/set cellsize
         assert Env.cellsize=="DEFAULT", "Env.cellsize != 'DEFAULT' ('%s')"%Env.cellsize
@@ -114,8 +114,19 @@ def test_gdal_calculations_py_2():
             gdaltest.post_reason('Env.resampling accepted an incorrect value')
             return 'fail'
 
+        #Get/set snap_dataset
+        assert not Env.snap_dataset, 'Env.snap_dataset is something'
+        Env.snap_dataset=Dataset('data/tgc_geo.tif')
+        assert isinstance(Env.snap_dataset,Dataset), 'Env.snap_dataset is not a Dataset'
+
         #Get/set tempdir
         assert Env.tempdir==tempfile.tempdir, 'Env.resampling != %s'%tempfile.tempdir
+        Env.tempdir='tmp' #Exists in autotest/pyscripts/tmp
+        try:Env.tempdir="INCORRECT"
+        except:pass
+        else:
+            gdaltest.post_reason('Env.tempdir accepted an incorrect value')
+            return 'fail'
 
         #Get/set tiled
         assert Env.tiled==True, "Env.tiled != True ('%s')"%Env.tiled
