@@ -37,66 +37,8 @@ import tempfile
 sys.path.append( '../pymod' )
 sys.path.append( '../../lib' )
 
-from osgeo import gdal
-from osgeo import osr
 import gdaltest
-import test_py_scripts
-
-###############################################################################
-# Create some test data
-def setup():
-    import numpy
-    from osgeo import gdal_array
-
-    #Raster (filepath,dataset) list
-    raster_list=[]
-
-    #Raster 0
-    filenames=['/vsimem/%s.tif'%tempfile._RandomNameSequence().next(),
-               '/vsimem/%s.tif'%tempfile._RandomNameSequence().next(),
-               '/vsimem/%s.tif'%tempfile._RandomNameSequence().next(),
-               '/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
-              ]
-
-    #Raster size
-    nrows=512
-    ncols=512
-    nbands=4
-
-    # data types
-    gdal_datatype = gdal.GDT_UInt16
-    np_datatype = gdal_array.GDALTypeCodeToNumericTypeCode(gdal_datatype)
-
-    for filename in filenames:
-        driver = gdal.GetDriverByName( "GTiff" )
-        dst_ds = driver.Create( filename, ncols, nrows, nbands, gdal_datatype )
-    
-        #Coordinates of the lower left corner of the image
-        #in same units as spatial reference
-        xllcorner=147.5
-        yllcorner=-34.5
-    
-        #Cellsize in same units as spatial reference
-        cellsize=0.01
-    
-        dst_ds.SetGeoTransform( [ xllcorner, cellsize, 0, yllcorner, 0, -cellsize ] )
-        srs = osr.SpatialReference()
-        srs.SetWellKnownGeogCS("WGS84")
-        dst_ds.SetProjection( srs.ExportToWkt() )
-    
-        #raster = numpy.ones((nrows,ncols)).astype(np_datatype )
-        raster = numpy.mgrid[1:nrows+1,1:ncols+1]
-        for band in range(nbands):
-            dst_ds.GetRasterBand(band+1).WriteArray( raster+band )
-        del raster
-        
-        # close the dataset
-        dst_ds.FlushCache()
-        dst_ds = None
-        
-        raster_list.append([filename,gdal.Open(filename)])
-
-    return raster_list
+from osgeo import gdal
 
 ###############################################################################
 # Test import
@@ -184,16 +126,37 @@ def test_gdal_calculations_py_2():
         gdaltest.post_reason(e.message)
         return 'fail'
 
-# Test dataset open
+# Test dataset open from filepath and gdal.Dataset object
 def test_gdal_calculations_py_3():
     try:
         import gdal_calculations
-        raster_list=setup() #
-        assert len(raster_list)>0,'len(raster_list)==0'
-        f,d=raster_list[0]
+        f='data/tgc_geo.tif'
+        d=gdal.Open(f)
         dsf=gdal_calculations.Dataset(f)
         dsd=gdal_calculations.Dataset(d)
         dsf=None
+        dsd=None
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        gdaltest.post_reason(e.message)
+        return 'fail'
+
+# Test dataset reads
+def test_gdal_calculations_py_4():
+    try:
+        import gdal_calculations
+        f='data/tgc_geo.tif'
+        d=gdal.Open(f)
+        dsf=gdal_calculations.Dataset(f)
+        data=dsf.ReadAsArray()
+        assert data.shape==(100,100), "data.shape==%s"%repr(data.shape)
+        data=None
+        for block in dsf.ReadBlocksAsArray():
+            assert block.data.shape==(40,100), "data.shape==%s"%repr(block.data.shape)
+            break
+        del block
         dsd=None
         return 'success'
     except ImportError:
@@ -207,6 +170,7 @@ gdaltest_list = [
                  test_gdal_calculations_py_1,
                  test_gdal_calculations_py_2,
                  test_gdal_calculations_py_3,
+                 test_gdal_calculations_py_4,
                 ]
 
 #raster_list=setup()
