@@ -427,6 +427,35 @@ def test_gdal_calculations_py_9():
         return 'fail'
     finally:cleanup()
 
+def test_gdal_calculations_py_10():
+    ''' Test snap dataset '''
+    try:
+        from gdal_calculations import Dataset, Env
+
+        f='data/tgc_geo.tif'
+        ds1=Dataset(f)
+        f='data/tgc_geo_shifted.vrt'
+        ds2=Dataset(f)
+        f='data/tgc_geo_shifted_2.vrt'
+        snap_ds=Dataset(f)
+
+        Env.snap_dataset=ds2
+        out=ds1+ds2
+        assert approx_equal([out._gt[0],out._gt[3]],[ds2._gt[0],ds2._gt[3]]),'out geotransform doesnae match ds2'
+
+        Env.snap_dataset=snap_ds
+        out=ds2+ds1
+        assert approx_equal([out._gt[0],out._gt[3]],[snap_ds._gt[0],snap_ds._gt[3]]),'out geotransform doesnae match snap_ds'
+
+        ds1,ds2,snap_ds,out=None,None,None,None
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        gdaltest.post_reason(e.message)
+        return 'fail'
+    finally:cleanup()
+
 def cleanup():
     for mod in list(sys.modules):
         if mod[:17]=='gdal_calculations':
@@ -443,15 +472,16 @@ def approx_equal( a, b ):
 
 ###############################################################################
 gdaltest_list = [
-                 test_gdal_calculations_py_1,
-                 test_gdal_calculations_py_2,
-                 test_gdal_calculations_py_3,
-                 test_gdal_calculations_py_4,
-                 test_gdal_calculations_py_5,
-                 test_gdal_calculations_py_6,
-                 test_gdal_calculations_py_7,
-                 test_gdal_calculations_py_8,
-                 test_gdal_calculations_py_9,
+##                 test_gdal_calculations_py_1,
+##                 test_gdal_calculations_py_2,
+##                 test_gdal_calculations_py_3,
+##                 test_gdal_calculations_py_4,
+##                 test_gdal_calculations_py_5,
+##                 test_gdal_calculations_py_6,
+##                 test_gdal_calculations_py_7,
+##                 test_gdal_calculations_py_8,
+##                 test_gdal_calculations_py_9,
+                 test_gdal_calculations_py_10,
                 ]
 
 if __name__ == '__main__':

@@ -1,0 +1,42 @@
+<VRTDataset rasterXSize="102" rasterYSize="102" subClass="VRTWarpedDataset">
+  <SRS>GEOGCS["GDA94",DATUM["Geocentric_Datum_of_Australia_1994",SPHEROID["GRS 1980",6378137,298.2572221010002,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6283"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4283"]]</SRS>
+  <GeoTransform> 1.4749000000000001e+002, 9.9999999999998215e-003, 0.0000000000000000e+000,-3.4490000000000002e+001, 0.0000000000000000e+000,-9.9999999999999603e-003</GeoTransform>
+  <Metadata>
+    <MDI key="AREA_OR_POINT">Area</MDI>
+  </Metadata>
+  <VRTRasterBand dataType="UInt16" band="1" subClass="VRTWarpedRasterBand">
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">10000</MDI>
+      <MDI key="STATISTICS_MEAN">5000.5</MDI>
+      <MDI key="STATISTICS_MINIMUM">1</MDI>
+      <MDI key="STATISTICS_STDDEV">2886.7513315144</MDI>
+    </Metadata>
+    <ColorInterp>Gray</ColorInterp>
+  </VRTRasterBand>
+  <BlockXSize>102</BlockXSize>
+  <BlockYSize>102</BlockYSize>
+  <GDALWarpOptions>
+    <WarpMemoryLimit>6.71089e+007</WarpMemoryLimit>
+    <ResampleAlg>NearestNeighbour</ResampleAlg>
+    <WorkingDataType>UInt16</WorkingDataType>
+    <Option name="INIT_DEST">0</Option>
+    <Option name="EXTRA_ELTS">1</Option>
+    <SourceDataset relativeToVRT="1">tgc_geo.tif</SourceDataset>
+    <Transformer>
+      <ApproxTransformer>
+        <MaxError>0.125</MaxError>
+        <BaseTransformer>
+          <GenImgProjTransformer>
+            <SrcGeoTransform>147.5,0.01,0,-34.5,0,-0.01</SrcGeoTransform>
+            <SrcInvGeoTransform>-14750,100,0,-3450.0000000000005,0,-100</SrcInvGeoTransform>
+            <DstGeoTransform>147.49000000000001,0.0099999999999998215,0,-34.490000000000002,0,-0.0099999999999999603</DstGeoTransform>
+            <DstInvGeoTransform>-14749.000000000266,100.00000000000179,0,-3449.0000000000141,0,-100.0000000000004</DstInvGeoTransform>
+          </GenImgProjTransformer>
+        </BaseTransformer>
+      </ApproxTransformer>
+    </Transformer>
+    <BandList>
+      <BandMapping src="1" dst="1" />
+    </BandList>
+  </GDALWarpOptions>
+</VRTDataset>

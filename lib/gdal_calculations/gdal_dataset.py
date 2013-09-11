@@ -179,12 +179,18 @@ class RasterLike(object):
         if not geom1.Intersects(geom2):
             raise RuntimeError('Input datasets do not overlap')
 
+        #Do we need to modify the extent?
         try:
             if ext.upper() in ['MINOF','INTERSECT']:
-                ext=self.__minextent__(other)
+                ext=dataset1.__minextent__(dataset2)
             elif ext.upper() in ['MAXOF','UNION']:
-                ext=self.__maxextent__(other)
-        except AttributeError: pass #ext is [xmin,ymin,xmax,ymax]
+                ext=dataset1.__maxextent__(dataset2)
+        except AttributeError: #ext is [xmin,ymin,xmax,ymax]
+            if Env.snap_dataset:
+                s_ext=Env.snap_dataset.extent
+                s_gt=Env.snap_dataset._gt
+                gt=[ext[0], dataset1._gt[1], dataset1._gt[2], ext[3], dataset1._gt[5], dataset1._gt[5]]
+                ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
 
         if dataset1.extent!=ext: dataset1=ClippedDataset(dataset1,ext)
         if dataset2.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
@@ -197,22 +203,28 @@ class RasterLike(object):
         return [ext[1][0],ext[1][1],ext[3][0],ext[3][1]]
 
     def __minextent__(self,other):
-        minext=geometry.MinExtent(self.extent,other.extent)
-        if not Env.snap_dataset:return minext
+        ext=geometry.MinExtent(self.extent,other.extent)
+        if not Env.snap_dataset:return ext
         else:
-            minext=geometry.SnapExtent(minext, Env.snap)
-            return minext
+            s_ext=Env.snap_dataset.extent
+            s_gt=Env.snap_dataset._gt
+            gt=[ext[0], self._gt[1], self._gt[2], ext[3], self._gt[5], self._gt[5]]
+            ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
+            return ext
 
 ##        ext1=self.extent
 ##        ext2=geometry.SnapExtent2(other.extent, other._gt, ext1, self._gt)
 ##        return geometry.MinExtent(ext1,ext2)
 
     def __maxextent__(self,other):
-        maxext=geometry.MaxExtent(self.extent,other.extent)
-        if not Env.snap_dataset:return maxext
+        ext=geometry.MaxExtent(self.extent,other.extent)
+        if not Env.snap_dataset:return ext
         else:
-            maxext=geometry.SnapExtent(maxext, Env.snap)
-            return maxext
+            s_ext=Env.snap_dataset.extent
+            s_gt=Env.snap_dataset._gt
+            gt=[ext[0], self._gt[1], self._gt[2], ext[3], self._gt[5], self._gt[5]]
+            ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
+            return ext
 ##        ext1=self.extent
 ##        ext2=geometry.SnapExtent2(other.extent, other._gt, ext1, self._gt)
 ##        return geometry.MaxExtent(ext1,ext2)
@@ -531,6 +543,7 @@ class Dataset(RasterLike):
         through to the underlying GDALDataset/ndarray objects
     '''
     def __init__(self,filepath_or_dataset=None,*args):
+        gdal.UseExceptions()
 
         fp=filepath_or_dataset
 

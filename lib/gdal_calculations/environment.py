@@ -153,7 +153,7 @@ class Env(object):
 
     @snap_dataset.setter
     def snap_dataset(self, value):
-        try:a=value._gt #Instead of cyclic import to test isinstance(RasterLike,value)
+        try:a=value._gt #Instead of checking isinstance(RasterLike,value) to avoid cyclic import
         except:raise RuntimeError('%s is not a Dataset/Band object'%value)
         self._snap_dataset=value
 
