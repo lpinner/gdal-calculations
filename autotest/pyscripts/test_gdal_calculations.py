@@ -472,15 +472,15 @@ def approx_equal( a, b ):
 
 ###############################################################################
 gdaltest_list = [
-##                 test_gdal_calculations_py_1,
-##                 test_gdal_calculations_py_2,
-##                 test_gdal_calculations_py_3,
-##                 test_gdal_calculations_py_4,
-##                 test_gdal_calculations_py_5,
-##                 test_gdal_calculations_py_6,
-##                 test_gdal_calculations_py_7,
-##                 test_gdal_calculations_py_8,
-##                 test_gdal_calculations_py_9,
+                 test_gdal_calculations_py_1,
+                 test_gdal_calculations_py_2,
+                 test_gdal_calculations_py_3,
+                 test_gdal_calculations_py_4,
+                 test_gdal_calculations_py_5,
+                 test_gdal_calculations_py_6,
+                 test_gdal_calculations_py_7,
+                 test_gdal_calculations_py_8,
+                 test_gdal_calculations_py_9,
                  test_gdal_calculations_py_10,
                 ]
 
