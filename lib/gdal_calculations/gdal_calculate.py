@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 '''
-Name: gdal_calculator
+Name: gdal_calculate
 Purpose: Perform simple tiled raster calculations (AKA "map algebra")
          from the commandline
 
