@@ -14,7 +14,55 @@ Notes:
          passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
        - If numexpr is installed, it can be used to evaluate your expressions, but note
          the limitations specified in the examples below.
-To Do:
+
+Classes/Objects:
+    Dataset(filepath_or_dataset,*args)
+        - Base Dataset class.
+        - Instantiate by passing a path or gdal.Dataset object.
+        - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
+        - Supports arithmetic operations (i.e ds1 + ds2)
+    Band- Band object returned from Dataset[i] (zero based) or Dataset.GetRasterBand(j) (1 based)
+        - Supports gdal.RasterBand and numpy.ndarray method and attribute calls.
+        - Supports arithmetic operations (i.e ds1[0] + ds2.GetRasterBand(1))
+    ArrayDataset(array,extent=[],srs='',gt=[],nodata=[], prototype_ds=None)
+        - Subclass of Dataset.
+        - Instantiate by passing a numpy ndarray and georeferencing information
+          or a prototype Dataset.
+        - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
+        - Supports arithmetic operations (i.e ds1 + ds2)
+    Env - Object for setting various environment properties. 
+          The following properties are supported:
+            cellsize
+              - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
+              - Default = "DEFAULT"
+            extent
+              - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
+              - Default = "MINOF"
+            nodata
+              - handle nodata using masked arrays - True/False
+              - Default = False
+            overwrite
+              - overwrite if required - True/False
+              - Default = False
+            reproject
+              - reproject if required - True/False
+              - datasets are projected to the SRS of the first input dataset in an expression
+              - Default = False
+            resampling
+              - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
+              - Default = "NEAREST"
+            snap
+              - a gdal_calculations.Dataset/Band object
+              - Default = None
+            tempdir
+              - temporary working directory
+              - Default = tempfile.tempdir
+            tiled
+              - use tiled processing - True/False
+              - Default = True
+    Byte, UInt16, Int16, UInt32, Int32, Float32, Float64
+        - Type conversions functions
+        - Returns a Dataset object
 
 Examples:
 
