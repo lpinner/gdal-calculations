@@ -165,11 +165,13 @@ class RasterLike(object):
             if (other._gt[1],abs(other._gt[5]))!=(px,py):
                 dataset2=WarpedDataset(other,self._srs, self, (px,py))
         elif Env.cellsize!='DEFAULT':
-            if (other._gt[1],other._gt[5])!=(self._gt[1],self._gt[5]):
-                dataset2=WarpedDataset(other,self._srs, self)
+            if (dataset1._gt[1],abs(dataset1._gt[5]))!=Env.cellsize:
+                dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1,Env.cellsize)
+            if (dataset2._gt[1],abs(dataset2._gt[5]))!=Env.cellsize:
+                dataset2=WarpedDataset(dataset2,dataset2._srs, dataset2,Env.cellsize)
         else: #Env.cellsize=='DEFAULT'
-            if (other._gt[1],abs(other._gt[5]))!=(self._gt[1],abs(self._gt[5])):
-                dataset2=WarpedDataset(other,self._srs, self, (self._gt[1],abs(self._gt[5])))
+            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(self._gt[1],abs(self._gt[5])):
+                dataset2=WarpedDataset(dataset2,self._srs, self, (self._gt[1],abs(self._gt[5])))
 
         geom1=geometry.GeomFromExtent(dataset1.extent)
         geom2=geometry.GeomFromExtent(dataset2.extent)

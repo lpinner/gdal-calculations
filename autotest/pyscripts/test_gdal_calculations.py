@@ -340,8 +340,8 @@ def test_gdal_calculations_py_8():
         f='data/tgc_geo_resize_2.vrt'
         ds3=Dataset(f)
         #Larger raster (warped)
-        #f='data/tgc_geo_resize_warp.vrt'
-        #ds4=Dataset(f)
+        f='data/tgc_geo_resize_warp.vrt'
+        ds4=Dataset(f)
 
         #Default extent = Min extent
         out=ds1+ds2
@@ -362,10 +362,63 @@ def test_gdal_calculations_py_8():
         Env.extent=[147.55, -35.45, 148.45, -34.55]
         out=ds1+ds2
         assert approx_equal(out.extent,Env.extent),'Env.extent=%s and out.extent==%s'%(Env.extent,out.extent)
-        out2=out+ds3
+        out=ds1+ds2+ds4
         assert approx_equal(out.extent,Env.extent),'Env.extent=%s and out.extent==%s'%(Env.extent,out.extent)
 
         ds1,ds2,ds3,ds4,out=None,None,None,None,None
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        gdaltest.post_reason(e.message)
+        return 'fail'
+    finally:cleanup()
+
+def test_gdal_calculations_py_9():
+    ''' Test on-the-fly resampling '''
+    try:
+        from gdal_calculations import Dataset, Env
+
+        #Smaller raster
+        f='data/tgc_geo.tif'
+        ds1=Dataset(f)
+        #Larger pixel raster
+        f='data/tgc_geo_resize_warp.vrt'
+        ds2=Dataset(f)
+
+        #Default cellsize = left dataset
+        out=ds1+ds2
+        assert approx_equal([out._gt[1],out._gt[5]],[ds1._gt[1],ds1._gt[5]]),'out cellsize!=ds1 cellsize'
+        out=ds2+ds1
+        assert approx_equal([out._gt[1],out._gt[5]],[ds2._gt[1],ds2._gt[5]]),'out cellsize!=ds2 cellsize'
+
+        #MINOF cellsize
+        Env.cellsize='MINOF'
+        out=ds1+ds2
+        assert approx_equal([out._gt[1],out._gt[5]],[ds1._gt[1],ds1._gt[5]]),'Env.cellsize=MINOF and out cellsize!=ds1 cellsize'
+        out=ds2+ds1
+        assert approx_equal([out._gt[1],out._gt[5]],[ds1._gt[1],ds1._gt[5]]),'Env.cellsize=MINOF and out cellsize!=ds1 cellsize'
+
+        #MAXOF cellsize
+        Env.cellsize='MAXOF'
+        out=ds1+ds2
+        assert approx_equal([out._gt[1],out._gt[5]],[ds2._gt[1],ds2._gt[5]]),'Env.cellsize=MAXOF and out cellsize!=ds2 cellsize'
+        out=ds2+ds1
+        assert approx_equal([out._gt[1],out._gt[5]],[ds2._gt[1],ds2._gt[5]]),'Env.cellsize=MAXOF and out cellsize!=ds2 cellsize'
+
+        #specific cellsize
+        Env.cellsize=0.015
+        out=ds1+ds2
+        assert approx_equal([out._gt[1],out._gt[5]],[0.015,-0.015]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        out=ds2+ds1
+        assert approx_equal([out._gt[1],out._gt[5]],[0.015,-0.015]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        Env.cellsize=(0.019,0.018)
+        out=ds1+ds2
+        assert approx_equal([out._gt[1],out._gt[5]],[0.019,-0.018]),'Env.cellsize=(0.019,0.018) and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        out=ds2+ds1
+        assert approx_equal([out._gt[1],out._gt[5]],[0.019,-0.018]),'Env.cellsize=(0.019,0.018) and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+
+        ds1,ds2,out=None,None,None
         return 'success'
     except ImportError:
         return 'skip'
@@ -390,14 +443,15 @@ def approx_equal( a, b ):
 
 ###############################################################################
 gdaltest_list = [
-##                 test_gdal_calculations_py_1,
-##                 test_gdal_calculations_py_2,
-##                 test_gdal_calculations_py_3,
-##                 test_gdal_calculations_py_4,
-##                 test_gdal_calculations_py_5,
-##                 test_gdal_calculations_py_6,
-##                 test_gdal_calculations_py_7,
+                 test_gdal_calculations_py_1,
+                 test_gdal_calculations_py_2,
+                 test_gdal_calculations_py_3,
+                 test_gdal_calculations_py_4,
+                 test_gdal_calculations_py_5,
+                 test_gdal_calculations_py_6,
+                 test_gdal_calculations_py_7,
                  test_gdal_calculations_py_8,
+                 test_gdal_calculations_py_9,
                 ]
 
 if __name__ == '__main__':
