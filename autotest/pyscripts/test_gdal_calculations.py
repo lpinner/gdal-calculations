@@ -46,7 +46,7 @@ def test_gdal_calculations_py_1():
         from gdal_calculations import Dataset
         return 'success'
     except ImportError:
-        return 'skip'
+        return 'fail'
     except Exception as e:
         gdaltest.post_reason(e.message)
         return 'fail'
@@ -418,8 +418,7 @@ def test_gdal_calculations_py_9():
         #Inappropriate cellsize
         Env.cellsize=25
         out=ds1+1 #Environment settings don't get applied with a single raster in the expression
-        assert not approx_equal([out._gt[1],out._gt[5]],[25,-25]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
-
+        assert not approx_equal([out._gt[1],out._gt[5]],[25,-25]),'Env.cellsize=25 and out cellsize==%s'%(out._gt[1])
         try:out=ds1+ds1
         except:pass
         else:raise Exception('Inappropriate cellsize ds1+ds1')
