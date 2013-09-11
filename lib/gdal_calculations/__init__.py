@@ -68,6 +68,7 @@ Examples:
 
     from gdal_calculations import *
     from osgeo import gdal
+    import numpy as np
 
     Env.extent = [xmin, ymin, xmax, ymax] # Other acceptable values:
                                           #  'INTERSECT' or 'MINOF' (default)
