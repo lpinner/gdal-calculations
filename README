@@ -2,50 +2,53 @@ This package enables simple tiled (or untiled if desired) raster calculations (A
 
 There is a commandline raster calculator:
 
-        Name: gdal_calculate
-        Purpose: Perform simple tiled raster calculations (AKA "map algebra")
-                 from the commandline
+    Name: gdal_calculate
+    Purpose: Perform simple tiled raster calculations (AKA "map algebra")
+             from the commandline
 
-        Notes:
-                 Can handle rasters with different extents and coordinate systems
-                 as long as they overlap.
+    Notes:
+             Can handle rasters with different extents and coordinate systems
+             as long as they overlap.
 
-                 Cellsizes must be the same.
+             Cellsizes must be the same.
 
-        Required parameters:
-             --calc     : calculation in numpy syntax, rasters specified as using
-                          any legal python variable name syntax, band numbers are
-                          specified using square brackets (zero based indexing)
-             --outfile  : output filepath
-             --{*}      : filepaths for raster variables used in --calc
-                          e.g. --calc='(someraster[0]+2)*c' --someraster='foo.tif' --c='bar.tif'
+    Required parameters:
+         --calc     : calculation in numpy syntax, rasters specified as using
+                      any legal python variable name syntax, band numbers are
+                      specified using square brackets (zero based indexing)
+         --outfile  : output filepath
+         --{*}      : filepaths for raster variables used in --calc
+                      e.g. --calc='(someraster[0]+2)*c' --someraster='foo.tif' --c='bar.tif'
 
-        Optional parameters:
-             --of            : GDAL format for output file (default "GTiff")')
-             --co            : Creation option to the output format driver.
-                               Multiple options may be listed.
-             --extent        : one of MINOF|INTERSECT|MAXOF|UNION|"xmin ymin xmax ymax"
-                               (Default=MINOF)
-             --nodata        : handle nodata using masked arrays (Default=False)
-                               uses numpy.ma.MaskedArray to handle NoData values
-                               MaskedArrays can be much slower...
-             --notile        : don't use tiled processing, faster but uses more memory (Default=False)
-             --overwrite     : overwrite if required (Default=False)
-             --reproject     : reproject if required (Default=False)
-                               datasets are projected to the SRS of the first input
-                               dataset in an expression
-             --resampling    : one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|
-                               "LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
-                               (Default="NEAREST")
-             --tempdir       : temporary working directory
+    Optional parameters:
+         --of            : GDAL format for output file (default "GTiff")')
+         --co            : Creation option to the output format driver.
+                           Multiple options may be listed.
+         --cellsize      : one of DEFAULT|MINOF|MAXOF|"xres yres"|xyres
+                           (Default=DEFAULT, leftmost dataset in expression)
+         --extent        : one of MINOF|INTERSECT|MAXOF|UNION|"xmin ymin xmax ymax"
+                           (Default=MINOF)
+         --nodata        : handle nodata using masked arrays (Default=False)
+                           uses numpy.ma.MaskedArray to handle NoData values
+                           MaskedArrays can be much slower...
+         --notile        : don't use tiled processing, faster but uses more memory (Default=False)
+         --overwrite     : overwrite if required (Default=False)
+         --reproject     : reproject if required (Default=False)
+                           datasets are projected to the SRS of the first input
+                           dataset in an expression
+         --resampling    : one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|
+                           "LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
+                           (Default="NEAREST")
+        --snap           : filepath of a raster to snap extent coordinates to.
+        --tempdir        : filepath to temporary working directory
 
-        Example:
-               gdal_calculate --outfile=../testdata/ndvi.tif       \
-                    --calc="((nir[3]-red[2].astype(numpy.float32))/(nir[3]+red[2].astype(numpy.float32)))" \
-                    --red=../testdata/landsat_utm50.tif  \
-                    --nir=../testdata/landsat_geo.tif    \
-                    --overwrite --reproject --extent=MAXOF
-                    
+    Example:
+           gdal_calculate --outfile=../testdata/ndvi.tif       \
+                --calc="((nir[3]-red[2].astype(numpy.float32))/(nir[3]+red[2].astype(numpy.float32)))" \
+                --red=../testdata/landsat_utm50.tif  \
+                --nir=../testdata/landsat_geo.tif    \
+                --overwrite --reproject --extent=MAXOF
+                
 And a raster calculations library:
 
     Name: gdal_calculations
@@ -56,13 +59,8 @@ And a raster calculations library:
     Contributors: Matt Gregory
 
     Notes:
-              Can handle rasters with different extents and coordinate systems
-              as long as they overlap.
-
-              Cellsizes must be the same.
-
-    To Do:
-            Handle different cellsizes?
+              Can handle rasters with different extents, cellsizes and coordinate
+              systems as long as they overlap.
 
     Examples:
         from gdal_calculations import *

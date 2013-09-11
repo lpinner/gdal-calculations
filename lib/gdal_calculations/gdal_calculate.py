@@ -30,6 +30,8 @@ Optional parameters:
      --of            : GDAL format for output file (default "GTiff")')
      --co            : Creation option to the output format driver.
                        Multiple options may be listed.
+     --cellsize      : one of DEFAULT|MINOF|MAXOF|"xres yres"|xyres
+                       (Default=DEFAULT, leftmost dataset in expression)
      --extent        : one of MINOF|INTERSECT|MAXOF|UNION|"xmin ymin xmax ymax"
                        (Default=MINOF)
      --nodata        : handle nodata using masked arrays (Default=False)
@@ -43,7 +45,9 @@ Optional parameters:
      --resampling    : one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|
                        "LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
                        (Default="NEAREST")
-     --tempdir       : temporary working directory
+    --snap           : filepath of a raster to snap extent coordinates to.
+    --tempdir        : filepath to temporary working directory
+
 
 Example:
        gdal_calculator.py --outfile=../testdata/ndvi.tif       \
@@ -130,17 +134,20 @@ def main():
         help='Passes a creation option to the output format driver. Multiple'
         'options may be listed. See format specific documentation for legal'
         'creation options for each format.')
+    argparser.add_argument('--cellsize', dest='extent', default='DEFAULT', help='Output extent - one of "DEFAULT", "MINOF", "MAXOF", "xres yres" , xyres')
     argparser.add_argument('--extent', dest='extent', default='MINOF', help='Output extent - one of "MINOF", "INTERSECT", "MAXOF", "UNION", "xmin ymin xmax ymax"')
     argparser.add_argument("--nodata", dest="nodata", default=False, action='store_true', help='Account for nodata  (Note this uses masked arrays which can be much slower)')
     argparser.add_argument('--overwrite', dest='overwrite', default=False, action='store_true', help='Overwrite output file if it already exists')
     argparser.add_argument('--reproject', dest='reproject', default=False, action='store_true', help='Reproject input rasters if required (datasets are projected to the SRS of the first input dataset in an expression)')
     argparser.add_argument('--resampling', dest='resampling', default='NEAREST', help='Resampling type when reprojecting - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)')
+    argparser.add_argument('--snap', dest='snap', default='', help='Filepath of a raster to snap extent coordinates to')
     argparser.add_argument('--tempdir', dest='tempdir', default=tempfile.gettempdir(), help='Temp working directory')
     argparser.add_argument("--notile", dest='notile', default=False, action='store_true', help='Don\'t use tiled processing - True/False')
 
     args, rasters = argparser.parse_known_args()
 
     #Set environment variables
+    Env.cellsize=args.cellsize
     try:Env.extent=map(float,args.extent.split())
     except:Env.extent=args.extent
     Env.nodata=args.nodata
@@ -148,6 +155,7 @@ def main():
     Env.reproject=args.reproject
     try:Env.resampling=int(args.resampling)
     except:Env.resampling=args.resampling
+    if args.snap:Env.snap=Dataset(args.snap)
     Env.tempdir=args.tempdir
     Env.tiled=not args.notile
 

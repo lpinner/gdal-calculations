@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ###############################################################################
-# $Id: test_gdal_calculations_py.py 26369 2013-08-25 19:48:28Z goatbar $
-#
 # Project:  GDAL/OGR Test Suite
 # Purpose:  gdal_calculations testing
 # Author:   Luke Pinner
-#
 ###############################################################################
 # Copyright (c) 2013, Luke Pinner
 #
@@ -114,10 +111,10 @@ def test_gdal_calculations_py_2():
             gdaltest.post_reason('Env.resampling accepted an incorrect value')
             return 'fail'
 
-        #Get/set snap_dataset
-        assert not Env.snap_dataset, 'Env.snap_dataset is something'
-        Env.snap_dataset=Dataset('data/tgc_geo.tif')
-        assert isinstance(Env.snap_dataset,Dataset), 'Env.snap_dataset is not a Dataset'
+        #Get/set snap
+        assert not Env.snap, 'Env.snap is something'
+        Env.snap=Dataset('data/tgc_geo.tif')
+        assert isinstance(Env.snap,Dataset), 'Env.snap is not a Dataset'
 
         #Get/set tempdir
         assert Env.tempdir==tempfile.tempdir, 'Env.resampling != %s'%tempfile.tempdir
@@ -439,11 +436,11 @@ def test_gdal_calculations_py_10():
         f='data/tgc_geo_shifted_2.vrt'
         snap_ds=Dataset(f)
 
-        Env.snap_dataset=ds2
+        Env.snap=ds2
         out=ds1+ds2
         assert approx_equal([out._gt[0],out._gt[3]],[ds2._gt[0],ds2._gt[3]]),'out geotransform doesnae match ds2'
 
-        Env.snap_dataset=snap_ds
+        Env.snap=snap_ds
         out=ds2+ds1
         assert approx_equal([out._gt[0],out._gt[3]],[snap_ds._gt[0],snap_ds._gt[3]]),'out geotransform doesnae match snap_ds'
 

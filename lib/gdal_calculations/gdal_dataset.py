@@ -15,8 +15,6 @@ Notes: - Can handle rasters with different extents,cellsizes and coordinate syst
        - If numexpr is installed, it can be used to evaluate your expressions, but note
          the limitations specified in the examples below.
 
-To Do: - Add snap raster functionality
-
 Examples:
 
     from gdal_calculations import *
@@ -186,9 +184,9 @@ class RasterLike(object):
             elif ext.upper() in ['MAXOF','UNION']:
                 ext=dataset1.__maxextent__(dataset2)
         except AttributeError: #ext is [xmin,ymin,xmax,ymax]
-            if Env.snap_dataset:
-                s_ext=Env.snap_dataset.extent
-                s_gt=Env.snap_dataset._gt
+            if Env.snap:
+                s_ext=Env.snap.extent
+                s_gt=Env.snap._gt
                 gt=[ext[0], dataset1._gt[1], dataset1._gt[2], ext[3], dataset1._gt[5], dataset1._gt[5]]
                 ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
 
@@ -204,30 +202,23 @@ class RasterLike(object):
 
     def __minextent__(self,other):
         ext=geometry.MinExtent(self.extent,other.extent)
-        if not Env.snap_dataset:return ext
+        if not Env.snap:return ext
         else:
-            s_ext=Env.snap_dataset.extent
-            s_gt=Env.snap_dataset._gt
+            s_ext=Env.snap.extent
+            s_gt=Env.snap._gt
             gt=[ext[0], self._gt[1], self._gt[2], ext[3], self._gt[5], self._gt[5]]
             ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
             return ext
-
-##        ext1=self.extent
-##        ext2=geometry.SnapExtent2(other.extent, other._gt, ext1, self._gt)
-##        return geometry.MinExtent(ext1,ext2)
 
     def __maxextent__(self,other):
         ext=geometry.MaxExtent(self.extent,other.extent)
-        if not Env.snap_dataset:return ext
+        if not Env.snap:return ext
         else:
-            s_ext=Env.snap_dataset.extent
-            s_gt=Env.snap_dataset._gt
+            s_ext=Env.snap.extent
+            s_gt=Env.snap._gt
             gt=[ext[0], self._gt[1], self._gt[2], ext[3], self._gt[5], self._gt[5]]
             ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
             return ext
-##        ext1=self.extent
-##        ext2=geometry.SnapExtent2(other.extent, other._gt, ext1, self._gt)
-##        return geometry.MaxExtent(ext1,ext2)
 
     def getnodes(self, root, nodetype, name, index=True):
         '''Function for handling serialised VRT XML'''

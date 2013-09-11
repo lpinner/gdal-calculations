@@ -31,7 +31,6 @@ __all__ = [ "Env", "Progress"]
 import sys,os,tempfile
 import numpy as np
 from osgeo import gdal
-#from gdal_dataset import RasterLike
 
 # Processing environment
 class Env(object):
@@ -56,6 +55,9 @@ class Env(object):
             resampling
               - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
               - Default = "NEAREST"
+            snap
+              - a gdal_calculations.Dataset/Band object
+              - Default = None
             tempdir
               - temporary working directory
               - Default = tempfile.tempdir
@@ -145,17 +147,17 @@ class Env(object):
         raise AttributeError('%s not one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*'%repr(value))
 
     @property
-    def snap_dataset(self):
-        try:return self._snap_dataset
+    def snap(self):
+        try:return self._snap
         except AttributeError:
-            self._snap_dataset=False
-            return self._snap_dataset
+            self._snap=False
+            return self._snap
 
-    @snap_dataset.setter
-    def snap_dataset(self, value):
+    @snap.setter
+    def snap(self, value):
         try:a=value._gt #Instead of checking isinstance(RasterLike,value) to avoid cyclic import
         except:raise RuntimeError('%s is not a Dataset/Band object'%value)
-        self._snap_dataset=value
+        self._snap=value
 
     @property
     def tempdir(self):
