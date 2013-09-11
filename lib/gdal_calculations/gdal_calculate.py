@@ -134,7 +134,7 @@ def main():
         help='Passes a creation option to the output format driver. Multiple'
         'options may be listed. See format specific documentation for legal'
         'creation options for each format.')
-    argparser.add_argument('--cellsize', dest='extent', default='DEFAULT', help='Output extent - one of "DEFAULT", "MINOF", "MAXOF", "xres yres" , xyres')
+    argparser.add_argument('--cellsize', dest='cellsize', default='DEFAULT', help='Output extent - one of "DEFAULT", "MINOF", "MAXOF", "xres yres" , xyres')
     argparser.add_argument('--extent', dest='extent', default='MINOF', help='Output extent - one of "MINOF", "INTERSECT", "MAXOF", "UNION", "xmin ymin xmax ymax"')
     argparser.add_argument("--nodata", dest="nodata", default=False, action='store_true', help='Account for nodata  (Note this uses masked arrays which can be much slower)')
     argparser.add_argument('--overwrite', dest='overwrite', default=False, action='store_true', help='Overwrite output file if it already exists')
@@ -161,8 +161,12 @@ def main():
 
     #get Datset objects from input files
     datasets=[]
-    for arg in rasters:
-        var,path=arg.split('=')
+    while rasters:
+        arg=rasters.pop(0)
+        try:var,path=arg.split('=') # --arg=filepath
+        except:
+            var=arg
+            path=rasters.pop(0)
         var=var.lstrip('-')
         locals()[var]=Dataset(path)
         datasets.append(locals()[var])
