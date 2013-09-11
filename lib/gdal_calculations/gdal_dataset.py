@@ -421,7 +421,7 @@ class RasterLike(object):
                                    datatype,dataset1._srs,dataset1._gt,nodata)
             tmpds.write_data(data, 0, 0)
 
-        #tmpds.FlushCache()
+        tmpds.FlushCache()
         Env.progress.update_progress()
         return tmpds
 
@@ -606,8 +606,6 @@ class TemporaryDataset(Dataset):
         use_exceptions=gdal.GetUseExceptions()
         gdal.UseExceptions()
 
-        #if cols,rows,bands,datatype==[None,None,None,None]
-
         try: #Test to see if enough memory
             tmpdriver=gdal.GetDriverByName('MEM')
             tmpds=tmpdriver.Create('',cols,rows,bands,datatype)
@@ -721,10 +719,10 @@ class ClippedDataset(Dataset):
         #use gdals built-in XML handling to reduce external dependencies
         vrttree = gdal.ParseXMLString(vrtxml)
         getnodes=self.getnodes
+
         #Handle warped VRTs
         wo=getnodes(vrttree, gdal.CXT_Element, 'GDALWarpOptions')
         if wo:vrttree=self._create_simple_VRT(orig_ds,bands)
-
 
         rasterXSize = getnodes(vrttree, gdal.CXT_Attribute, 'rasterXSize')[0]
         rasterYSize = getnodes(vrttree, gdal.CXT_Attribute, 'rasterYSize')[0]

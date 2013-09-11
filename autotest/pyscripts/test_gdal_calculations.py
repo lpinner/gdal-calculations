@@ -359,13 +359,11 @@ def test_gdal_calculations_py_8():
         assert approx_equal(out.extent,ds3.extent),'Env.extent="MAXOF" and out.extent!=ds3.extent'
 
         #specified extent
-        Env.extent=[147.55, -35.45, 148.45, -34.55]  
+        Env.extent=[147.55, -35.45, 148.45, -34.55]
         out=ds1+ds2
         assert approx_equal(out.extent,Env.extent),'Env.extent=%s and out.extent==%s'%(Env.extent,out.extent)
-        out=ds1+ds2
         out2=out+ds3
         assert approx_equal(out.extent,Env.extent),'Env.extent=%s and out.extent==%s'%(Env.extent,out.extent)
-
 
         ds1,ds2,ds3,ds4,out=None,None,None,None,None
         return 'success'
@@ -392,13 +390,13 @@ def approx_equal( a, b ):
 
 ###############################################################################
 gdaltest_list = [
-                 test_gdal_calculations_py_1,
-                 test_gdal_calculations_py_2,
-                 test_gdal_calculations_py_3,
-                 test_gdal_calculations_py_4,
-                 test_gdal_calculations_py_5,
-                 test_gdal_calculations_py_6,
-                 test_gdal_calculations_py_7,
+##                 test_gdal_calculations_py_1,
+##                 test_gdal_calculations_py_2,
+##                 test_gdal_calculations_py_3,
+##                 test_gdal_calculations_py_4,
+##                 test_gdal_calculations_py_5,
+##                 test_gdal_calculations_py_6,
+##                 test_gdal_calculations_py_7,
                  test_gdal_calculations_py_8,
                 ]
 
