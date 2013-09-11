@@ -46,4 +46,8 @@ setup(
     scripts=scripts,
     package_dir={'': 'lib'},
     packages=['gdal_calculations'],
+    data_files=[('',['README']),
+                ('',['COPYING']),
+                ('',['NEWS'])
+               ],
     )
