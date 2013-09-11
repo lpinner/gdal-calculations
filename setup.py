@@ -31,6 +31,14 @@ if 'sdist' not in sys.argv:
     if os.name=='nt':del scripts[0]
     else:del scripts[1]
 
+if 'install' in sys.argv:
+    try:
+        from osgeo import gdal
+        import numpy
+    except ImportError:
+        import warnings
+        warnings.warn('osgeo (gdal) and numpy required')
+
 setup(
     name = 'gdal-calculations',
     version = __version__,
