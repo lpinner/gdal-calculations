@@ -42,7 +42,7 @@ if 'install' in sys.argv:
 setup(
     name = 'gdal-calculations',
     version = __version__,
-	license = 'GPL',
+	license = 'MIT',
 	description=SHORTDESC,
 	long_description=LONGDESC,
 	author=AUTHOR,
