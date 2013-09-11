@@ -6,8 +6,8 @@ Purpose: Perform simple tiled raster calculations (AKA "map algebra")
 
 Notes:
         - Can handle rasters with different extents,cellsizes and coordinate
-          systems as long as they overlap. If /coordinate systems differ, the
-          output cellsize/coordinate system will be that of the leftmost Dataset
+          systems as long as they overlap. If coordinate systems differ, the
+          output coordinate system will be that of the leftmost Dataset
           in the expression.
         - GDALDataset and RasterBand and numpy method and attribute calls are
           passed down to the underlying GDALDataset, GDALRasterBand and ndarray
