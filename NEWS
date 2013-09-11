@@ -1,0 +1,12 @@
+= GDAL Calculations 0.4 2013-09-11 (AEST) =
+
+== Additions ==
+* Added snap to dataset environment setting
+* Added cellsize environment setting
+* Added autotest script and test data
+
+== Fixes ==
+* Fixed clipped temp datasets bug
+* Fix extent handling bug
+* Handle warped VRTs
+* Fix numerous bugs found autotesting

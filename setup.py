@@ -1,5 +1,9 @@
+__version__='0.4'
+
 import os,sys
 from distutils.core import setup
+sys.path.insert(0,'lib')
+
 
 SHORTDESC='Simple tiled (or untiled if desired) raster calculations (AKA "map algebra")'
 
@@ -29,7 +33,7 @@ if 'sdist' not in sys.argv:
 
 setup(
     name = 'gdal-calculations',
-    version = '0.4dev',
+    version = __version__,
 	license = 'GPL',
 	description=SHORTDESC,
 	long_description=LONGDESC,
