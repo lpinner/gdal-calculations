@@ -556,6 +556,26 @@ def test_gdal_calculations_py_13():
         return fail(e.message)
     finally:cleanup()
 
+def test_gdal_calculations_py_14():
+    ''' Test numexpr '''
+    try:
+        return 'skip'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        return fail(e.message)
+    finally:cleanup()
+
+def test_gdal_calculations_py_16():
+    ''' Test commandline '''
+    try:
+        return 'skip'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        return fail(e.message)
+    finally:cleanup()
+
 #-----------------------------------------------------------
 def fail(reason):
     gdaltest.post_reason(reason)
