@@ -118,6 +118,9 @@ import os, tempfile, operator, itertools, sys
 from environment import Env,Progress
 import geometry
 
+gdal.UseExceptions()
+osr.UseExceptions()
+
 # Calculations classes
 class Block(object):
     '''Block class thanks to Matt Gregory'''
@@ -133,44 +136,52 @@ class RasterLike(object):
 
     def __init__(self):raise NotImplementedError
 
-    def check_extent(self,other):
-        ext=Env.extent
+    def apply_environment(self,other):
+        dataset1=self
+        dataset2=other
 
-        srs1=osr.SpatialReference(self._srs)
-        srs2=osr.SpatialReference(other._srs)
+        ext=Env.extent
+        srs=Env.srs
+
+        srs1=osr.SpatialReference(dataset1._srs)
+        srs2=osr.SpatialReference(dataset2._srs)
 
         #Do we need to reproject?
-        if not srs1.IsSame(srs2):
+        if srs:
+             if not srs1.IsSame(srs):
+                dataset1=WarpedDataset(dataset1,srs.ExportToWkt(), Env.snap)
+             if not srs2.IsSame(srs):
+                dataset2=WarpedDataset(dataset2,srs.ExportToWkt(), dataset1)
+        elif not srs1.IsSame(srs2):
             if  Env.reproject:
-                other=WarpedDataset(other,self._srs, self)
+                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1)
             else:raise RuntimeError('Coordinate systems differ and Env.reproject==False')
 
         #Do we need to resample?
-        dataset1=self
-        dataset2=other
         if Env.cellsize=='MAXOF':
-            px=max(self._gt[1],other._gt[1])
-            py=max(abs(self._gt[5]),abs(other._gt[5]))
-            if (self._gt[1],abs(self._gt[5]))!=(px,py):
-                dataset1=WarpedDataset(self,self._srs, self, (px,py))
-            if (other._gt[1],abs(other._gt[5]))!=(px,py):
-                dataset2=WarpedDataset(other,self._srs, self, (px,py))
+            px=max(dataset1._gt[1],dataset2._gt[1])
+            py=max(abs(dataset1._gt[5]),abs(dataset2._gt[5]))
+            if (dataset1._gt[1],abs(dataset1._gt[5]))!=(px,py):
+                dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1, (px,py))
+            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(px,py):
+                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (px,py))
         elif Env.cellsize=='MINOF':
-            px=min(self._gt[1],other._gt[1])
-            py=min(abs(self._gt[5]),abs(other._gt[5]))
-            if (self._gt[1],abs(self._gt[5]))!=(px,py):
-                dataset1=WarpedDataset(self,self._srs, self, (px,py))
-            if (other._gt[1],abs(other._gt[5]))!=(px,py):
-                dataset2=WarpedDataset(other,self._srs, self, (px,py))
+            px=min(dataset1._gt[1],dataset2._gt[1])
+            py=min(abs(dataset1._gt[5]),abs(dataset2._gt[5]))
+            if (dataset1._gt[1],abs(dataset1._gt[5]))!=(px,py):
+                dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1, (px,py))
+            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(px,py):
+                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (px,py))
         elif Env.cellsize!='DEFAULT':
             if (dataset1._gt[1],abs(dataset1._gt[5]))!=Env.cellsize:
                 dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1,Env.cellsize)
             if (dataset2._gt[1],abs(dataset2._gt[5]))!=Env.cellsize:
                 dataset2=WarpedDataset(dataset2,dataset2._srs, dataset2,Env.cellsize)
         else: #Env.cellsize=='DEFAULT'
-            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(self._gt[1],abs(self._gt[5])):
-                dataset2=WarpedDataset(dataset2,self._srs, self, (self._gt[1],abs(self._gt[5])))
+            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(dataset1._gt[1],abs(dataset1._gt[5])):
+                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (dataset1._gt[1],abs(dataset1._gt[5])))
 
+        #Do they overlap
         geom1=geometry.GeomFromExtent(dataset1.extent)
         geom2=geometry.GeomFromExtent(dataset2.extent)
 
@@ -194,6 +205,8 @@ class RasterLike(object):
         if dataset2.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
 
         return dataset1,dataset2
+
+    check_extent=apply_environment #synonym for backwards compatability
 
     def __get_extent__(self):
         #Returns [(ulx,uly),(llx,lly),(lrx,lry),(urx,urx)]
@@ -658,8 +671,10 @@ class TemporaryDataset(Dataset):
     def __del__(self):
         self._dataset=None
         del self._dataset
-        if self._filedescriptor>-1:os.close(self._filedescriptor)
-        self._driver.Delete(self._filename)
+        try:os.close(self._filedescriptor)
+        except:pass
+        try:self._driver.Delete(self._filename)
+        except:pass
 
 class ArrayDataset(TemporaryDataset):
     def __init__(self,array,extent=[],srs='',gt=[],nodata=[],prototype_ds=None):
@@ -853,7 +868,8 @@ class ClippedDataset(Dataset):
         return (int(xoff+0.5),int(yoff+0.5),int(xsize+0.5),int(ysize+0.5))
 
     def __del__(self):
-        self._dataset.GetDriver().Delete(self._dataset.GetDescription())
+        try:self._dataset.GetDriver().Delete(self._dataset.GetDescription())
+        except:pass
         self._dataset=None
         del self._dataset
         self._parent=None
@@ -927,8 +943,10 @@ class ConvertedDataset(Dataset):
         Dataset.__init__(self)
 
     def __del__(self):
-        Dataset.__del__(self)
-        gdal.Unlink(self._fn)
+        try:Dataset.__del__(self)
+        except:pass
+        try:gdal.Unlink(self._fn)
+        except:pass
 
 class WarpedDataset(Dataset):
 
@@ -1071,9 +1089,12 @@ class WarpedDataset(Dataset):
         return gdal.Open(self._warped_fn)
 
     def __del__(self):
-        Dataset.__del__(self)
-        gdal.Unlink(self._warped_fn)
-        gdal.Unlink(self._simple_fn)
+        try:Dataset.__del__(self)
+        except:pass
+        try:gdal.Unlink(self._warped_fn)
+        except:pass
+        try:gdal.Unlink(self._simple_fn)
+        except:pass
 
 class Stack(object):
     ''' Stub of basic implementation for a Stack of Band objects

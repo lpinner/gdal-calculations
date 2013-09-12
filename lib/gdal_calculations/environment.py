@@ -30,7 +30,7 @@ __all__ = [ "Env", "Progress"]
 
 import sys,os,tempfile
 import numpy as np
-from osgeo import gdal
+from osgeo import gdal, osr
 
 # Processing environment
 class Env(object):
@@ -51,12 +51,17 @@ class Env(object):
             reproject
               - reproject if required - True/False
               - datasets are projected to the SRS of the first input dataset in an expression
+                unless Env.srs is set.
               - Default = False
             resampling
               - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
               - Default = "NEAREST"
             snap
               - a gdal_calculations.Dataset/Band object
+              - Default = None
+            srs
+              - the output spatial reference system
+              - one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
               - Default = None
             tempdir
               - temporary working directory
@@ -150,7 +155,7 @@ class Env(object):
     def snap(self):
         try:return self._snap
         except AttributeError:
-            self._snap=False
+            self._snap=None
             return self._snap
 
     @snap.setter
@@ -158,6 +163,38 @@ class Env(object):
         try:a=value._gt #Instead of checking isinstance(RasterLike,value) to avoid cyclic import
         except:raise RuntimeError('%s is not a Dataset/Band object'%value)
         self._snap=value
+
+    @property
+    def srs(self):
+        try:return self._srs
+        except AttributeError:
+            self._srs=None
+            return self._srs
+
+    @srs.setter
+    def srs(self, value):
+        try:
+            #EPSG?
+            epsg=int(value)
+            ret=osr.SpatialReference()
+            if ret.ImportFromEPSG(epsg)>0:raise Exception
+        except ValueError:
+            #WKT
+            ret=osr.SpatialReference(value)
+        except TypeError:
+            #SpatialReference
+            ret=value
+        except Exception:
+            #It's invalid
+            raise RuntimeError('not a valid SpatialReference: %s'%repr(value))
+
+        try:
+            #Was the EPSG/WKT/SRS valid?
+            self._srs=ret.Clone()
+            self.reproject=True
+        except TypeError:
+            #It's invalid
+            raise RuntimeError('not a valid SpatialReference: %s'%repr(value))
 
     @property
     def tempdir(self):

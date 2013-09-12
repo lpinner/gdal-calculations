@@ -31,12 +31,12 @@ import os
 import shutil
 import tempfile
 import numpy as np
+from osgeo import gdal, osr
 
-sys.path.append( '../pymod' )
-sys.path.append( '../../lib' )
+sys.path.insert(0, '../pymod' )
+sys.path.insert(0,'../../lib' )
 
 import gdaltest
-from osgeo import gdal
 
 ###############################################################################
 def test_gdal_calculations_py_1():
@@ -45,11 +45,8 @@ def test_gdal_calculations_py_1():
         import gdal_calculations
         from gdal_calculations import Dataset
         return 'success'
-    except ImportError:
-        return 'fail'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_2():
@@ -66,9 +63,7 @@ def test_gdal_calculations_py_2():
         Env.cellsize=[1,1]
         try:Env.cellsize="INCORRECT"
         except:pass
-        else:
-            gdaltest.post_reason('Env.cellsize accepted an incorrect value')
-            return 'fail'
+        else:return fail('Env.cellsize accepted an incorrect value')
 
         #Get/set extent
         assert Env.extent=="MINOF", "Env.extent != 'MINOF' ('%s')"%Env.extent
@@ -77,9 +72,7 @@ def test_gdal_calculations_py_2():
         Env.extent=[1,1,2,2]
         try:Env.extent="INCORRECT"
         except:pass
-        else:
-            gdaltest.post_reason('Env.extent accepted an incorrect value')
-            return 'fail'
+        else:return fail('Env.extent accepted an incorrect value')
 
         #Get/set extent
         assert Env.nodata==False, "Env.nodata != False ('%s')"%Env.nodata
@@ -107,14 +100,37 @@ def test_gdal_calculations_py_2():
         Env.resampling="NEAREST"
         try:Env.resampling="INCORRECT"
         except:pass
-        else:
-            gdaltest.post_reason('Env.resampling accepted an incorrect value')
-            return 'fail'
+        else:return fail('Env.resampling accepted an incorrect value')
 
         #Get/set snap
-        assert not Env.snap, 'Env.snap is something'
+        assert Env.snap is None, 'Env.snap should be None not %s'%repr(Env.snap)
         Env.snap=Dataset('data/tgc_geo.tif')
         assert isinstance(Env.snap,Dataset), 'Env.snap is not a Dataset'
+
+        #Get/set srs
+        epsg=4283
+        wkt='GEOGCS["GDA94",DATUM["Geocentric_Datum_of_Australia_1994",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6283"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4283"]]'
+        srs=osr.SpatialReference(wkt)
+        assert Env.srs is None, 'Env.srs should be None'
+        Env.srs=epsg
+        assert isinstance(Env.srs,osr.SpatialReference), 'Env.srs is not a SpatialReference (EPSG)'
+        Env.srs=wkt
+        assert isinstance(Env.srs,osr.SpatialReference), 'Env.srs is not a SpatialReference (WKT)'
+        Env.srs=srs
+        assert isinstance(Env.srs,osr.SpatialReference), 'Env.srs is not a SpatialReference (SpatialReference)'
+        gue=osr.GetUseExceptions()
+        osr.DontUseExceptions()
+        try:Env.srs=1
+        except:pass
+        else:return fail('Env.srs accepted an invalid EPSG (1)')
+        try:Env.srs='INCORRECT'
+        except:pass
+        else:return fail('Env.extent accepted an invalid WKT ("INCORRECT")')
+        try:Env.srs=osr.SpatialReference('sdfsdfsdf')
+        except:pass
+        else:return fail('Env.extent accepted an invalid SpatialReference')
+        if gue:osr.UseExceptions()
+        else:osr.DontUseExceptions()
 
         #Get/set tempdir
         assert Env.tempdir==tempfile.tempdir, 'Env.resampling != %s'%tempfile.tempdir
@@ -134,8 +150,7 @@ def test_gdal_calculations_py_2():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_3():
@@ -143,6 +158,7 @@ def test_gdal_calculations_py_3():
     try:
         from gdal_calculations import Dataset
         from gdal_calculations.gdal_dataset import Band
+
         f='data/tgc_geo.tif'
         d=gdal.Open(f)
         dsf=Dataset(f)
@@ -157,8 +173,7 @@ def test_gdal_calculations_py_3():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_4():
@@ -208,8 +223,7 @@ def test_gdal_calculations_py_4():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_5():
@@ -262,8 +276,7 @@ def test_gdal_calculations_py_5():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_6():
@@ -286,8 +299,7 @@ def test_gdal_calculations_py_6():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_7():
@@ -367,8 +379,7 @@ def test_gdal_calculations_py_8():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_9():
@@ -428,8 +439,7 @@ def test_gdal_calculations_py_9():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
 
 def test_gdal_calculations_py_10():
@@ -457,9 +467,64 @@ def test_gdal_calculations_py_10():
     except ImportError:
         return 'skip'
     except Exception as e:
-        gdaltest.post_reason(e.message)
-        return 'fail'
+        return fail(e.message)
     finally:cleanup()
+
+def test_gdal_calculations_py_11():
+    ''' Test snap dataset '''
+    try:
+        from gdal_calculations import Dataset, Env
+
+        f='data/tgc_geo.tif'
+        ds1=Dataset(f)
+        f='data/tgc_geo_shifted.vrt'
+        ds2=Dataset(f)
+        f='data/tgc_geo_shifted_2.vrt'
+        snap_ds=Dataset(f)
+
+        Env.snap=ds2
+        out=ds1+ds2
+        assert approx_equal([out._gt[0],out._gt[3]],[ds2._gt[0],ds2._gt[3]]),'out geotransform doesnae match ds2'
+
+        Env.snap=snap_ds
+        out=ds2+ds1
+        assert approx_equal([out._gt[0],out._gt[3]],[snap_ds._gt[0],snap_ds._gt[3]]),'out geotransform doesnae match snap_ds'
+
+        ds1,ds2,snap_ds,out=None,None,None,None
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        return fail(e.message)
+    finally:cleanup()
+
+def test_gdal_calculations_py_12():
+    ''' Test srs '''
+    try:
+        from gdal_calculations import Dataset, Env
+
+        Env.srs=3112 #GDA94 / Australia Lambert
+
+        f='data/tgc_geo.tif' #GDA94 / Geographic
+        ds1=Dataset(f)
+        f='data/tgc_alb.vrt' #GDA94 / Australia Albers
+        ds2=Dataset(f)
+
+        out=ds1[0]+ds2[0]
+        outsrs=osr.SpatialReference(out._srs)
+        assert Env.srs.IsSame(outsrs),'out srs != Env.srs'
+
+        ds1,ds2,out=None,None,None
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        return fail(e.message)
+    finally:cleanup()
+
+def fail(reason):
+    gdaltest.post_reason(reason)
+    return 'fail'
 
 def cleanup():
     for mod in list(sys.modules):
@@ -487,6 +552,8 @@ gdaltest_list = [
                  test_gdal_calculations_py_8,
                  test_gdal_calculations_py_9,
                  test_gdal_calculations_py_10,
+                 test_gdal_calculations_py_11,
+                 test_gdal_calculations_py_12,
                 ]
 
 if __name__ == '__main__':
