@@ -9,6 +9,7 @@
   </Metadata>
   <VRTRasterBand dataType="UInt16" band="1">
     <Metadata />
+    <NoDataValue>0.00000000000000E+00</NoDataValue>
     <ColorInterp>Gray</ColorInterp>
     <SimpleSource>
       <SourceFilename relativeToVRT="1">tgc_geo.tif</SourceFilename>

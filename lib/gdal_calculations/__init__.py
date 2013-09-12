@@ -54,6 +54,10 @@ Classes/Objects:
             snap
               - a gdal_calculations.Dataset/Band object
               - Default = None
+            srs
+              - the output spatial reference system
+              - one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
+              - Default = None
             tempdir
               - temporary working directory
               - Default = tempfile.tempdir

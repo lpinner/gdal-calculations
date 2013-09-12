@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 '''
-Name: environment.py
-Purpose: Environment and progress classes
+Name: conversions.py
+Purpose: Datatype conversion functions
 
 Author: Luke Pinner
 '''

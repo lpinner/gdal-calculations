@@ -148,9 +148,9 @@ class RasterLike(object):
 
         #Do we need to reproject?
         if srs:
-             if not srs1.IsSame(srs):
+            if not srs1.IsSame(srs):
                 dataset1=WarpedDataset(dataset1,srs.ExportToWkt(), Env.snap)
-             if not srs2.IsSame(srs):
+            if not srs2.IsSame(srs):
                 dataset2=WarpedDataset(dataset2,srs.ExportToWkt(), dataset1)
         elif not srs1.IsSame(srs2):
             if  Env.reproject:

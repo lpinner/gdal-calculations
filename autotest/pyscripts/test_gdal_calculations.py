@@ -522,6 +522,41 @@ def test_gdal_calculations_py_12():
         return fail(e.message)
     finally:cleanup()
 
+def test_gdal_calculations_py_13():
+    ''' Test nodata handling '''
+    try:
+        from gdal_calculations import Dataset, Env
+
+        f='data/tgc_geo_resize.vrt'
+        dsf=Dataset(f)
+
+        Env.nodata=True
+        
+        #1st pixel should be 0
+        #tgc_geo_resize.vrt does not have a nodata value set
+        val=dsf[0].ReadAsArray(0, 0, 1, 1)
+        assert val==0, "dsf[0].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        #Add 1
+        out=dsf[0]+1
+        val=out.ReadAsArray(0, 0, 1, 1)
+        assert val==1, "out.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        #Set nodata and add 1 again
+        dsf[0].SetNoDataValue(0)
+        out=dsf[0]+1
+        val=out.ReadAsArray(0, 0, 1, 1)
+        assert val==0, "out.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        dsf,out=None,None
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        return fail(e.message)
+    finally:cleanup()
+
+#-----------------------------------------------------------
 def fail(reason):
     gdaltest.post_reason(reason)
     return 'fail'
@@ -554,6 +589,7 @@ gdaltest_list = [
                  test_gdal_calculations_py_10,
                  test_gdal_calculations_py_11,
                  test_gdal_calculations_py_12,
+                 test_gdal_calculations_py_13,
                 ]
 
 if __name__ == '__main__':
