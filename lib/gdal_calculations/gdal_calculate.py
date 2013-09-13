@@ -78,12 +78,13 @@ Example:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-import numpy,tempfile
+import os, sys, numpy, tempfile
 from osgeo import gdal
 from gdal_dataset import *
 from environment import *
 from conversions import *
 import geometry
+from gdal_calculations import __version__
 
 def main():
 
@@ -122,12 +123,26 @@ def main():
     ##Some args below originally derived from gdal_calc.py (MIT/X license)
     ##http://svn.osgeo.org/gdal/trunk/gdal/swig/python/scripts/gdal_calc.py
 
+    #Test for --version arg before parsing so the required parameters don't cause
+    #the argparser to display the help.
+    if '-v' in sys.argv or '--version' in sys.argv:
+        print __version__
+        sys.exit(0)
+
+    #Test for --redirect-stderr arg so it doesn't appear in the usage
+    #This kludge is because the gdal autotest function gdaltest.runexternal()
+    #doesn't read stderr and I wanted to stick within the gdal test framework
+    if '--redirect-stderr' in sys.argv:
+        oldstderr=sys.stderr
+        sys.stderr=sys.stdout
+        del sys.argv[sys.argv.index('--redirect-stderr')]
+
     #Required parameters
     argparser.add_argument('--calc', dest='calc', help='calculation in numpy syntax using +-/* or numpy array functions (i.e. numpy.logical_and())', required=True)
     argparser.add_argument('--outfile', dest='outfile', help='output file to Generate.', required=True)
 
     #Optional parameters
-    argparser.add_argument('-q', dest='quiet', default=False, action='store_true', help='Suppress progress meter')
+    argparser.add_argument('-q', '--quiet', dest='quiet', default=False, action='store_true', help='Suppress progress meter')
     argparser.add_argument('--of', dest='outformat', default='GTiff', help='GDAL format for output file (default "GTiff")')
     argparser.add_argument(
         '--creation-option', '--co', dest='creation_options', default=[], action='append',

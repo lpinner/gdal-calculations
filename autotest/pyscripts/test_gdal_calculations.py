@@ -33,10 +33,12 @@ import tempfile
 import numpy as np
 from osgeo import gdal, osr
 
+sys.path.insert(0, '../gcore' )
 sys.path.insert(0, '../pymod' )
 sys.path.insert(0,'../../lib' )
 
 import gdaltest
+import test_py_scripts
 
 ###############################################################################
 def test_gdal_calculations_py_1():
@@ -563,31 +565,117 @@ def test_gdal_calculations_py_13():
 def test_gdal_calculations_py_14():
     ''' Test numexpr '''
     try:
-        return 'skip'
+        from gdal_calculations import Dataset, Env
+        import numexpr as ne
+
+        f='data/tgc_geo.tif'
+        ds1=Dataset(f)
+        f='data/tgc_geo_resize.vrt'
+        ds2=Dataset(f)
+
+        #Must not be tiled for numexpr
+        try:ne.evaluate('ds1+1')
+        except:pass
+        else:fail('numexpr.evaluate succeeded and Env.tiled=True')
+        Env.tiled=False
+        out=ne.evaluate('ds1+1') #returns a numpy ndarray
+        assert out.shape==(ds1.RasterXSize,ds1.RasterYSize), "out.shape == %s not %s"% \
+                        (repr(out.shape), repr((ds1.RasterXSize,ds1.RasterYSize)))
+
+        #No subscripting or methods in the expression
+        try:ne.evaluate('Float32(ds1[0])+1')
+        except:pass
+        else:fail('numexpr.evaluate succeeded and with subscripting / methods in the expression')
+
+        #Must be same coordinate systems and dimensions
+        #The apply_environment method will reproject/resample/clip if required
+        try:ne.evaluate('ds1+ds2')
+        except:pass
+        else:fail('numexpr.evaluate succeeded when ds1 and ds2 extents differ')
+        ds3,ds4=ds1.apply_environment(ds2)
+        out=ne.evaluate('ds3+ds4') #returns a numpy ndarray
+        assert out.shape==(ds1.RasterXSize,ds1.RasterYSize), "out.shape == %s not %s"% \
+                        (repr(out.shape), repr((ds1.RasterXSize,ds1.RasterYSize)))
+
+        return 'success'
     except ImportError:
         return 'skip'
     except Exception as e:
         return fail(e.message)
-    finally:cleanup()
+    finally:
+        cleanup()
+        cleanup('numexpr')
 
 def test_gdal_calculations_py_15():
     ''' Test commandline '''
+    #In the unlikely event this code ever ends up _in_ GDAL, this function
+    #will need modification to comply with standard GDAL script/sample paths
     try:
-        return 'skip'
-    except ImportError:
-        return 'skip'
+        from gdal_calculations import Dataset, __version__
+        cd=os.path.abspath(os.curdir)
+
+        testdir=os.path.abspath(os.path.dirname(__file__))
+        datadir=os.path.join(testdir,'data')
+        tmpdir=os.path.join(testdir,'tmp')
+        topdir=os.path.abspath(os.path.join(testdir,'..','..'))
+        bindir=os.path.join(topdir,'bin')
+        libdir=os.path.join(topdir,'lib')
+
+        f1=os.path.join(datadir,'tgc_geo.tif')
+        f2=os.path.join(datadir,'tgc_geo_resize.vrt')
+
+        #test commandline scripts (assumes orig googlecode svn structure, not various gdal setups)
+        #All the commandline gdal_calculate and gdal_calculate.cmd scripts do
+        #is call python -m gdal_calculations <args>
+        os.chdir(libdir) #So script can find module
+        script=os.path.join(bindir,'gdal_calculate')
+        if sys.platform == 'win32':script+='.cmd'
+        #gdaltest.runexternal() doesn't read stderr
+        ret = gdaltest.runexternal(script + ' --version --redirect-stderr').strip()
+        assert ret==__version__,'Script version (%s) != %s'%(ret,__version__)
+
+        #Try running something that numexpr can handle
+        #if numexpr is not available, this should be handled by standard python eval
+        out=os.path.join(tmpdir,'tgc_15a.ers')
+        args='--calc="ds+1" --ds="%s" --outfile="%s" --of=ERS --redirect-stderr' % (f1,out)
+        try:
+            ret = gdaltest.runexternal(script+' '+args).strip()
+            ds=Dataset(out)
+            del ds
+        except Exception as e:raise RuntimeError(ret+'\n'+e.message)
+        finally:
+            try:gdal.GetDriverByName('ERS').Delete(ds._dataset)
+            except:pass
+
+        #Try running something that numexpr can't handle,
+        #this should be handled by standard python eval
+        out=os.path.join(tmpdir,'tgc_15b.ers')
+        args='--calc="ds1+ds2" --ds1="%s" --ds2="%s" --outfile="%s" --of=ERS --redirect-stderr' % (f1,f2, out)
+        try:
+            ret = gdaltest.runexternal(script+' '+args).strip()
+            ds=Dataset(out)
+            del ds
+        except Exception as e:raise RuntimeError(ret+'\n'+e.message)
+        finally:
+            try:gdal.GetDriverByName('ERS').Delete(ds._dataset)
+            except:pass
+
+        return 'success'
     except Exception as e:
         return fail(e.message)
-    finally:cleanup()
+    finally:
+        os.chdir(cd)
+        cleanup()
 
 #-----------------------------------------------------------
 def fail(reason):
     gdaltest.post_reason(reason)
     return 'fail'
 
-def cleanup():
+def cleanup(name='gdal_calculations'):
+    ''' Unload specified modules '''
     for mod in list(sys.modules):
-        if mod[:17]=='gdal_calculations':
+        if mod[:len(name)]==name:
             del sys.modules[mod]
     return
 
@@ -598,6 +686,7 @@ def approx_equal( a, b ):
     except TypeError: #Maybe they're lists?
         eq=[gdaltest.approx_equal(a,b) for a,b in zip(a,b)]
         return 0 not in eq
+
 
 ###############################################################################
 gdaltest_list = [
@@ -614,6 +703,8 @@ gdaltest_list = [
                  test_gdal_calculations_py_11,
                  test_gdal_calculations_py_12,
                  test_gdal_calculations_py_13,
+                 test_gdal_calculations_py_14,
+                 test_gdal_calculations_py_15,
                 ]
 
 if __name__ == '__main__':

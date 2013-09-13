@@ -290,9 +290,9 @@ class RasterLike(object):
     def __ndarrayattribute__(self,attr):
         '''Pass attribute gets down to ndarray'''
         if attr[:8] == '__array_' and Env.tiled:
-            #raise RuntimeError('Env.tiled must be False to use numexpr.eval.')
-            sys.stderr.write('Env.tiled must be False to use numexpr.eval.\n')
-            return None
+            raise RuntimeError('Env.tiled must be False to use numexpr.eval.')
+            #sys.stderr.write('Env.tiled must be False to use numexpr.eval.\n')
+            #return None
         if Env.tiled:
             '''Pass attribute gets down to the first block.
                Obviously won't work for b.shape etc...'''
@@ -306,9 +306,9 @@ class RasterLike(object):
 
         def __method__(*args,**kwargs):
             if attr[:8] == '__array_' and Env.tiled:
-                #raise RuntimeError('Env.tiled must be False to use numexpr.eval.')
-                sys.stderr.write('Env.tiled must be False to use numexpr.eval.\n')
-                return None
+                raise RuntimeError('Env.tiled must be False to use numexpr.eval.')
+                #sys.stderr.write('Env.tiled must be False to use numexpr.eval.\n')
+                #return None
 
             if Env.tiled:
                 tmpds=None
