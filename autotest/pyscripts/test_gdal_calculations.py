@@ -528,27 +528,31 @@ def test_gdal_calculations_py_13():
         from gdal_calculations import Dataset, Env
 
         f='data/tgc_geo_resize.vrt'
-        dsf=Dataset(f)
+        dsf=Dataset(f, gdal.GA_ReadOnly)
 
         Env.nodata=True
-        
+
         #1st pixel should be 0
         #tgc_geo_resize.vrt does not have a nodata value set
         val=dsf[0].ReadAsArray(0, 0, 1, 1)
         assert val==0, "dsf[0].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
 
-        #Add 1
-        out=dsf[0]+1
+        #Add 1.
+        #Create a copy of the VRT so GDAL doesn't modify it on disk
+        dsg=Dataset(gdal.GetDriverByName('VRT').CreateCopy('',dsf._dataset))
+        out=dsg[0]+1
         val=out.ReadAsArray(0, 0, 1, 1)
-        assert val==1, "out.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        assert val==1, "dsg[0] nodata not set (%s) out.ReadAsArray(0, 0, 1, 1)==%s"% \
+                        (repr(dsf[0].GetNoDataValue()), repr(val))
 
         #Set nodata and add 1 again
-        dsf[0].SetNoDataValue(0)
-        out=dsf[0]+1
+        dsg[0].SetNoDataValue(0)
+        out=dsg[0]+1
         val=out.ReadAsArray(0, 0, 1, 1)
-        assert val==0, "out.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        assert val==0, "dsg[0] nodata is set (%s) out.ReadAsArray(0, 0, 1, 1)==%s"% \
+                        (repr(dsf[0].GetNoDataValue()), repr(val))
 
-        dsf,out=None,None
+        dsf,dsg,out=None,None,None
         return 'success'
     except ImportError:
         return 'skip'
@@ -566,7 +570,7 @@ def test_gdal_calculations_py_14():
         return fail(e.message)
     finally:cleanup()
 
-def test_gdal_calculations_py_16():
+def test_gdal_calculations_py_15():
     ''' Test commandline '''
     try:
         return 'skip'

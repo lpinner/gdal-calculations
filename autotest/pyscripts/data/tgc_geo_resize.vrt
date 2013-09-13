@@ -1,6 +1,6 @@
 <VRTDataset rasterXSize="102" rasterYSize="102">
   <SRS>GEOGCS["GDA94",DATUM["Geocentric_Datum_of_Australia_1994",SPHEROID["GRS 1980",6378137,298.2572221010002,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6283"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4283"]]</SRS>
-  <GeoTransform>  1.4749000000000001e+02,  1.0000000000000000e-02,  0.0000000000000000e+00, -3.4490000000000002e+01,  0.0000000000000000e+00, -1.0000000000000000e-02</GeoTransform>
+  <GeoTransform> 1.4749000000000001e+002, 1.0000000000000000e-002, 0.0000000000000000e+000,-3.4490000000000002e+001, 0.0000000000000000e+000,-1.0000000000000000e-002</GeoTransform>
   <Metadata>
     <MDI key="AREA_OR_POINT">Area</MDI>
   </Metadata>
@@ -9,7 +9,6 @@
   </Metadata>
   <VRTRasterBand dataType="UInt16" band="1">
     <Metadata />
-    <NoDataValue>0.00000000000000E+00</NoDataValue>
     <ColorInterp>Gray</ColorInterp>
     <SimpleSource>
       <SourceFilename relativeToVRT="1">tgc_geo.tif</SourceFilename>
