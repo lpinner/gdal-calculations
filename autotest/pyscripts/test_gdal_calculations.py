@@ -633,6 +633,7 @@ def test_gdal_calculations_py_15():
         #gdaltest.runexternal() doesn't read stderr
         ret = gdaltest.runexternal(script + ' --version --redirect-stderr').strip()
         assert ret==__version__,'Script version (%s) != %s'%(ret,__version__)
+        del ret
 
         #Try running something that numexpr can handle
         #if numexpr is not available, this should be handled by standard python eval
@@ -644,8 +645,11 @@ def test_gdal_calculations_py_15():
             del ds
         except Exception as e:raise RuntimeError(ret+'\n'+e.message)
         finally:
-            try:gdal.GetDriverByName('ERS').Delete(ds._dataset)
+            try:
+                gdal.Unlink(out)
+                gdal.Unlink(out[:-4])
             except:pass
+        del ret
 
         #Try running something that numexpr can't handle,
         #this should be handled by standard python eval
@@ -657,8 +661,12 @@ def test_gdal_calculations_py_15():
             del ds
         except Exception as e:raise RuntimeError(ret+'\n'+e.message)
         finally:
-            try:gdal.GetDriverByName('ERS').Delete(ds._dataset)
+            try:
+                gdal.Unlink(out)
+                gdal.Unlink(out[:-4])
             except:pass
+        del ret
+
 
         return 'success'
     except Exception as e:
