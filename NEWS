@@ -1,3 +1,11 @@
+= GDAL Calculations 0.5 2013-09-14 (AEST) =
+
+== Additions ==
+* Added srs to environment setting
+
+== Fixes ==
+* Fix some bugs found autotesting
+
 = GDAL Calculations 0.4 2013-09-11 (AEST) =
 
 == Additions ==

@@ -122,7 +122,7 @@ Examples:
     #Must be same coordinate systems and dimensions
     #The check_extent method will reproject and clip if required
     #This is done using virtual rasters (VRT) so is very quick
-    nir,red=nir.check_extent(red)
+    nir,red=nir.apply_environment(red)
 
     expr='(nir-red)/(nir+red)'
     ndvi=ne.evaluate(expr)

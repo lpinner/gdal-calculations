@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 ###############################################################################
-# Project:  GDAL/OGR Test Suite
+# Project:  Gdal Calculations GDAL/OGR style Test Suite
 # Purpose:  gdal_calculations testing
 # Author:   Luke Pinner
 ###############################################################################
