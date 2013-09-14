@@ -7,10 +7,18 @@ There is a commandline raster calculator:
              from the commandline
 
     Notes:
-             Can handle rasters with different extents and coordinate systems
-             as long as they overlap.
-
-             Cellsizes must be the same.
+        - Can handle rasters with different extents,cellsizes and coordinate
+          systems as long as they overlap. If coordinate systems differ, the
+          output coordinate system will be that of the leftmost Dataset
+          in the expression.
+        - GDALDataset and RasterBand and numpy method and attribute calls are
+          passed down to the underlying GDALDataset, GDALRasterBand and ndarray
+          objects.
+        - If numexpr is installed, gdal_calculate will try to use numexpr.evaluate
+          to process the expression as it is much faster. However, numexpr
+          expressions are very limited: tiled processing, on-the-fly reprojection,
+          extent clipping/snapping, method/function calls and subscripting are
+          not supported.
 
     Required parameters:
          --calc     : calculation in numpy syntax, rasters specified as using
@@ -40,7 +48,10 @@ There is a commandline raster calculator:
                            "LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
                            (Default="NEAREST")
         --snap           : filepath of a raster to snap extent coordinates to.
-        --tempdir        : filepath to temporary working directory
+        --srs            : the output spatial reference system
+                           one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
+                           (Default = None)
+       --tempdir         : filepath to temporary working directory
 
     Example:
            gdal_calculate --outfile=../testdata/ndvi.tif       \
@@ -59,8 +70,66 @@ And a raster calculations library:
     Contributors: Matt Gregory
 
     Notes:
-              Can handle rasters with different extents, cellsizes and coordinate
-              systems as long as they overlap.
+       - Can handle rasters with different extents,cellsizes and coordinate systems
+         as long as they overlap. If cellsizes/coordinate systems differ, the output
+         cellsize/coordinate system will be that of the leftmost Dataset in the expression.
+       - gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are
+         passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
+       - If numexpr is installed, it can be used to evaluate your expressions, but note
+         the limitations specified in the examples below.
+
+    Classes/Objects:
+        Dataset(filepath_or_dataset,*args)
+            - Base Dataset class.
+            - Instantiate by passing a path or gdal.Dataset object.
+            - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
+            - Supports arithmetic operations (i.e ds1 + ds2)
+        Band- Band object returned from Dataset[i] (zero based) or Dataset.GetRasterBand(j) (1 based)
+            - Supports gdal.RasterBand and numpy.ndarray method and attribute calls.
+            - Supports arithmetic operations (i.e ds1[0] + ds2.GetRasterBand(1))
+        ArrayDataset(array,extent=[],srs='',gt=[],nodata=[], prototype_ds=None)
+            - Subclass of Dataset.
+            - Instantiate by passing a numpy ndarray and georeferencing information
+              or a prototype Dataset.
+            - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
+            - Supports arithmetic operations (i.e ds1 + ds2)
+        Env - Object for setting various environment properties. 
+              The following properties are supported:
+                cellsize
+                  - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
+                  - Default = "DEFAULT"
+                extent
+                  - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
+                  - Default = "MINOF"
+                nodata
+                  - handle nodata using masked arrays - True/False
+                  - Default = False
+                overwrite
+                  - overwrite if required - True/False
+                  - Default = False
+                reproject
+                  - reproject if required - True/False
+                  - datasets are projected to the SRS of the first input dataset in an expression
+                  - Default = False
+                resampling
+                  - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
+                  - Default = "NEAREST"
+                snap
+                  - a gdal_calculations.Dataset/Band object
+                  - Default = None
+                srs
+                  - the output spatial reference system
+                  - one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
+                  - Default = None
+                tempdir
+                  - temporary working directory
+                  - Default = tempfile.tempdir
+                tiled
+                  - use tiled processing - True/False
+                  - Default = True
+        Byte, UInt16, Int16, UInt32, Int32, Float32, Float64
+            - Type conversions functions
+            - Returns a Dataset object
 
     Examples:
         from gdal_calculations import *
