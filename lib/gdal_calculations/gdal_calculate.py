@@ -46,6 +46,9 @@ Optional parameters:
                        "LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
                        (Default="NEAREST")
     --snap           : filepath of a raster to snap extent coordinates to.
+    --srs            : the output spatial reference system
+                       one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
+                       (Default = None)
     --tempdir        : filepath to temporary working directory
 
 
