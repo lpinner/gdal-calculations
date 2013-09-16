@@ -30,7 +30,7 @@ Classes/Objects:
           or a prototype Dataset.
         - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
         - Supports arithmetic operations (i.e ds1 + ds2)
-    Env - Object for setting various environment properties. 
+    Env - Object for setting various environment properties.
           The following properties are supported:
             cellsize
               - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
@@ -161,7 +161,7 @@ Examples:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-__version__='0.5'
+__version__='0.6dev'
 
 from gdal_dataset import *
 from conversions import *
