@@ -39,6 +39,34 @@ if 'install' in sys.argv:
         import warnings
         warnings.warn('osgeo (gdal) and numpy required')
 
+if 'bdist' in sys.argv:
+    from distutils.command.bdist_wininst import bdist_wininst as _bdist_wininst
+    from distutils.command.bdist_wininst import __file__ as _bdist_file
+    from sysconfig import get_python_version
+
+    class bdist_wininst(_bdist_wininst):
+        """Patched wininst to allow building from wininst-9.0*.exe. on linux
+           and wininst-9.0-amd64.exe on Win32
+        """
+        def get_exe_bytes (self):
+            cur_version = get_python_version()
+            bv=9.0
+            directory = os.path.dirname(_bdist_file)
+            if self.plat_name != 'win32' and self.plat_name[:3] == 'win':
+                sfix = self.plat_name[3:]
+            else:
+                sfix = ''
+
+            filename = os.path.join(directory, "wininst-%.1f%s.exe" % (bv, sfix))
+            f = open(filename, "rb")
+            try:
+                return f.read()
+            finally:
+                f.close()
+    setupkwargs={'cmdclass':{'bdist_wininst':bdist_wininst}}
+else:
+    setupkwargs={}
+
 setup(
     name = 'gdal-calculations',
     version = __version__,
@@ -58,4 +86,5 @@ setup(
                 ('',['COPYING']),
                 ('',['NEWS'])
                ],
+    **setupkwargs
     )

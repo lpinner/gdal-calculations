@@ -1,5 +1,5 @@
-python setup.py sdist  --formats=gztar
-python setup.py bdist --format=wininst
-"C:\Python27\ArcGISx6410.1\python.exe" setup.py bdist --format=wininst
+python setup.py sdist --formats=gztar
+python setup.py bdist --format=wininst --plat-name=win-amd64
+python setup.py bdist --format=wininst --plat-name=win32
 rmdir /S /Q build
 pause
