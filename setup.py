@@ -1,14 +1,13 @@
 __version__='0.5'
 
-import os,sys
+import os,sys,warnings
 from distutils.core import setup
 sys.path.insert(0,'lib')
 
 
 SHORTDESC='Simple tiled (or untiled if desired) raster calculations (AKA "map algebra")'
 
-LONGDESC='''
-This package enables simple tiled (or untiled if desired) raster calculations
+LONGDESC='''This package enables simple tiled (or untiled if desired) raster calculations
 (AKA "map algebra") from the commandline or from within your python scripts.
 There is a commandline raster calculator and a raster calculations library.'''
 
@@ -17,12 +16,12 @@ AUTHOR_EMAIL="gdal.calculations@maildrop.cc"
 URL="https://code.google.com/p/gdal-calculations"
 
 CLASSIFIERS = [ 'Operating System :: OS Independent',
-                'License :: OSI Approved ::  MIT License',
+                'License :: OSI Approved :: MIT License',
                 'Topic :: Scientific/Engineering :: GIS',
                 'Development Status :: 4 - Beta']
 
-REQUIRES = ['GDAL','numpy']
-RECOMMENDS=['numexpr']
+REQUIRED = ['osgeo.gdal','numpy']
+RECOMMENDED=['numexpr']
 
 script=os.path.join('bin', 'gdal_calculate')
 scripts=[script,script+'.cmd']
@@ -32,12 +31,12 @@ if 'sdist' not in sys.argv:
     else:del scripts[1]
 
 if 'install' in sys.argv:
-    try:
-        from osgeo import gdal
-        import numpy
-    except ImportError:
-        import warnings
-        warnings.warn('osgeo (gdal) and numpy required')
+    for module in REQUIRED:
+        try:__import__(module)
+        except ImportError:warnings.warn('%s is required.')
+    for module in RECOMMENDED:
+        try:__import__(module)
+        except ImportError:warnings.warn('%s is recommended.')
 
 if 'bdist' in sys.argv:
     from distutils.command.bdist_wininst import bdist_wininst as _bdist_wininst
@@ -77,8 +76,6 @@ setup(
 	author_email=AUTHOR_EMAIL,
 	classifiers = CLASSIFIERS,
 	url=URL,
-    install_requires=REQUIRES,
-    extras_require=RECOMMENDS,
     scripts=scripts,
     package_dir={'': 'lib'},
     packages=['gdal_calculations'],
