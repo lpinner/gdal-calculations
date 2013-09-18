@@ -61,12 +61,17 @@ class RasterLike(object):
     def __init__(self):raise NotImplementedError
 
     def apply_environment(self,other):
-        dataset1=self
-        dataset2=other
+        ''' Apply various environment settings and checks
+            including snapping/extents/cellsizes/coordinate systems
+        '''
+        dataset1,dataset2=self.__check_srs__(self,other)
+        dataset1,dataset2=self.__check_cellsize__(dataset1,dataset2)
+        dataset1,dataset2=self.__check_extent__(dataset1,dataset2)
+        return dataset1,dataset2
+    check_extent=apply_environment #synonym for backwards compatability
 
-        ext=Env.extent
+    def __check_srs__(self,dataset1,dataset2):
         srs=Env.srs
-
         srs1=osr.SpatialReference(dataset1._srs)
         srs2=osr.SpatialReference(dataset2._srs)
 
@@ -81,6 +86,9 @@ class RasterLike(object):
                 dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1)
             else:raise RuntimeError('Coordinate systems differ and Env.reproject==False')
 
+        return dataset1,dataset2
+
+    def __check_cellsize__(self,dataset1,dataset2):
         #Do we need to resample?
         if Env.cellsize=='MAXOF':
             px=max(dataset1._gt[1],dataset2._gt[1])
@@ -104,6 +112,11 @@ class RasterLike(object):
         else: #Env.cellsize=='DEFAULT'
             if (dataset2._gt[1],abs(dataset2._gt[5]))!=(dataset1._gt[1],abs(dataset1._gt[5])):
                 dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (dataset1._gt[1],abs(dataset1._gt[5])))
+
+        return dataset1,dataset2
+
+    def __check_extent__(self,dataset1,dataset2):
+        ext=Env.extent
 
         #Do they overlap
         geom1=geometry.GeomFromExtent(dataset1.extent)
@@ -129,8 +142,6 @@ class RasterLike(object):
         if dataset2.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
 
         return dataset1,dataset2
-
-    check_extent=apply_environment #synonym for backwards compatability
 
     def __get_extent__(self):
         #Returns [(ulx,uly),(llx,lly),(lrx,lry),(urx,urx)]
