@@ -60,6 +60,9 @@ class RasterLike(object):
 
     def __init__(self):raise NotImplementedError
 
+    #===========================================================================
+    #Public methods
+    #===========================================================================
     def apply_environment(self,other):
         ''' Apply various environment settings and checks
             including snapping/extents/cellsizes/coordinate systems
@@ -68,8 +71,40 @@ class RasterLike(object):
         dataset1,dataset2=self.__check_cellsize__(dataset1,dataset2)
         dataset1,dataset2=self.__check_extent__(dataset1,dataset2)
         return dataset1,dataset2
-    check_extent=apply_environment #synonym for backwards compatability
+    check_extent=apply_environment #synonym for backwards compatability with v. <0.5
 
+    def read_blocks_as_array(self,nblocks=1):
+        '''Read GDAL Datasets/Bands block by block'''
+
+        ncols=self._x_size
+        nrows=self._y_size
+        xblock,yblock=self._block_size
+
+        if xblock==ncols:
+            yblock*=nblocks
+        else:
+            xblock*=nblocks
+
+        for yoff in xrange(0, nrows, yblock):
+
+            if yoff + yblock < nrows:
+                ysize = yblock
+            else:
+                ysize  = nrows - yoff
+
+            for xoff in xrange(0, ncols, xblock):
+                if xoff + xblock < ncols:
+                    xsize  = xblock
+                else:
+                    xsize = ncols - xoff
+
+                yield Block(self, xoff, yoff, xsize, ysize )
+    #CamelCase synonym
+    ReadBlocksAsArray=read_blocks_as_array
+
+    #===========================================================================
+    #Private methods
+    #===========================================================================
     def __check_srs__(self,dataset1,dataset2):
         srs=Env.srs
         srs1=osr.SpatialReference(dataset1._srs)
@@ -148,6 +183,15 @@ class RasterLike(object):
         ext=geometry.GeoTransformToExtent(self._gt,self._x_size,self._y_size)
         return [ext[1][0],ext[1][1],ext[3][0],ext[3][1]]
 
+    def __getnodes__(self, root, nodetype, name, index=True):
+        '''Function for handling serialised VRT XML'''
+        nodes=[]
+        for i,node in enumerate(root[2:]):
+            if node[0] == nodetype and node[1] == name:
+                if index:nodes.append(i+2)
+                else:nodes.append(node)
+        return nodes
+
     def __minextent__(self,other):
         ext=geometry.MinExtent(self.extent,other.extent)
         if not Env.snap:return ext
@@ -168,15 +212,6 @@ class RasterLike(object):
             ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
             return ext
 
-    def getnodes(self, root, nodetype, name, index=True):
-        '''Function for handling serialised VRT XML'''
-        nodes=[]
-        for i,node in enumerate(root[2:]):
-            if node[0] == nodetype and node[1] == name:
-                if index:nodes.append(i+2)
-                else:nodes.append(node)
-        return nodes
-
     def __read_vsimem__(self,fn):
         '''Read GDAL vsimem files'''
         vsifile = gdal.VSIFOpenL(fn,'r')
@@ -192,36 +227,9 @@ class RasterLike(object):
         gdal.VSIFWriteL(data, 1, size, vsifile)
         return gdal.VSIFCloseL(vsifile)
 
-    def read_blocks_as_array(self,nblocks=1):
-        '''Read GDAL Datasets/Bands block by block'''
-
-        ncols=self._x_size
-        nrows=self._y_size
-        xblock,yblock=self._block_size
-
-        if xblock==ncols:
-            yblock*=nblocks
-        else:
-            xblock*=nblocks
-
-        for yoff in xrange(0, nrows, yblock):
-
-            if yoff + yblock < nrows:
-                ysize = yblock
-            else:
-                ysize  = nrows - yoff
-
-            for xoff in xrange(0, ncols, xblock):
-                if xoff + xblock < ncols:
-                    xsize  = xblock
-                else:
-                    xsize = ncols - xoff
-
-                yield Block(self, xoff, yoff, xsize, ysize )
-
-    #CamelCase synonym
-    ReadBlocksAsArray=read_blocks_as_array
-
+    #===========================================================================
+    #gdal.Dataset/Band and ndarray attribute calls
+    #===========================================================================
     def __ndarrayattribute__(self,attr):
         '''Pass attribute gets down to ndarray'''
         if attr[:8] == '__array_' and Env.tiled:
@@ -378,7 +386,9 @@ class RasterLike(object):
         Env.progress.update_progress()
         return tmpds
 
+    #===========================================================================
     #Basic arithmetic operations
+    #===========================================================================
     def __add__(self,other):
         return self.__operation__(operator.__add__,other)
     def __sub__(self,other):
@@ -424,7 +434,9 @@ class RasterLike(object):
     def __rxor__(self,other):
         return self.__operation__(operator.__xor__,other)
 
+    #===========================================================================
     #Boolean operations
+    #===========================================================================
     def __lt__(self,other):
         return self.__operation__(operator.__lt__,other)
     def __le__(self,other):
@@ -555,91 +567,6 @@ class Dataset(RasterLike):
     def Stack(self):
         return Stack([Band(self.GetRasterBand(i+1),self, i) for i in xrange(self.RasterCount)])
 
-class TemporaryDataset(Dataset):
-    def __init__(self,cols,rows,bands,datatype,srs='',gt=[],nodata=[]):
-        use_exceptions=gdal.GetUseExceptions()
-        gdal.UseExceptions()
-
-        try: #Test to see if enough memory
-            tmpdriver=gdal.GetDriverByName('MEM')
-            tmpds=tmpdriver.Create('',cols,rows,bands,datatype)
-            tmpds=None
-            del tmpds
-
-            self._filedescriptor=-1
-            self._filename='/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
-
-        except (RuntimeError,MemoryError):
-            self._filedescriptor,self._filename=tempfile.mkstemp(suffix='.tif')
-
-        self._driver=gdal.GetDriverByName('GTIFF')
-        self._dataset=self._driver.Create (self._filename,cols,rows,bands,datatype,['BIGTIFF=IF_SAFER'])
-
-        if not use_exceptions:gdal.DontUseExceptions()
-        self._dataset.SetGeoTransform(gt)
-        self._dataset.SetProjection(srs)
-        for i,val in enumerate(nodata[:bands]):
-            try:self._dataset.GetRasterBand(i+1).SetNoDataValue(val)
-            except TypeError:pass
-        Dataset.__init__(self)
-
-    def save(self,outpath,outformat='GTIFF',options=[]):
-        self.FlushCache()
-        ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
-        if ok:
-            driver=gdal.GetDriverByName(outformat)
-            ds=driver.CreateCopy(outpath,self._dataset,options=options)
-            ds=None
-            del ds
-            return Dataset(outpath)
-        else:raise RuntimeError('Output %s exists and overwrite is not set.'%outpath)
-
-    def write_data(self, data, x_off, y_off):
-        if data.ndim==2:
-            tmpbnd=self._dataset.GetRasterBand(1)
-            tmpbnd.WriteArray(data, x_off, y_off)
-        else:
-            for i in range(data.shape[0]):
-                tmpbnd=self._dataset.GetRasterBand(i+1)
-                tmpbnd.WriteArray(data[i,:,:], x_off, y_off)
-
-    def __del__(self):
-        self._dataset=None
-        del self._dataset
-        try:os.close(self._filedescriptor)
-        except:pass
-        try:self._driver.Delete(self._filename)
-        except:pass
-
-class ArrayDataset(TemporaryDataset):
-    def __init__(self,array,extent=[],srs='',gt=[],nodata=[],prototype_ds=None):
-        use_exceptions=gdal.GetUseExceptions()
-        gdal.UseExceptions()
-
-        #datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.dtype.type)
-        #Work around numexpr issue #112 - http://code.google.com/p/numexpr/issues/detail?id=112
-        #until http://trac.osgeo.org/gdal/ticket/5223 is implemented.
-        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.view(str(array.dtype)).dtype.type)
-
-        if array.ndim==2:
-            rows,cols=array.shape
-            bands=1
-        else:
-            rows,cols,bands=array.shape
-
-        if prototype_ds:
-            if not gt:gt=prototype_ds._gt
-            if not srs:srs=prototype_ds._srs
-            if not nodata:nodata=prototype_ds._nodata
-
-        if extent:
-            xmin,ymin,xmax,ymax=extent
-            px,py=(xmax-xmin)/cols,(ymax-ymin)/rows
-            gt=[xmin,px,0,ymax,0,-py]
-
-        TemporaryDataset.__init__(self,cols,rows,bands,datatype,srs,gt,nodata)
-        self.write_data(array,0,0)
-
 class ClippedDataset(Dataset):
     '''Use a VRT to "clip" to min extent of two rasters'''
 
@@ -674,7 +601,7 @@ class ClippedDataset(Dataset):
         #Parse the XML,
         #use gdals built-in XML handling to reduce external dependencies
         vrttree = gdal.ParseXMLString(vrtxml)
-        getnodes=self.getnodes
+        getnodes=self.__getnodes__
 
         #Handle warped VRTs
         wo=getnodes(vrttree, gdal.CXT_Element, 'GDALWarpOptions')
@@ -835,7 +762,7 @@ class ConvertedDataset(Dataset):
         #Parse the XML,
         #use gdals built-in XML handling to reduce external dependencies
         vrttree = gdal.ParseXMLString(vrtxml)
-        getnodes=self.getnodes
+        getnodes=self.__getnodes__
 
         #Loop through bands, remove the bands, modify
         #then reinsert in case we are dealing with a "Band" object
@@ -881,6 +808,62 @@ class ConvertedDataset(Dataset):
         try:Dataset.__del__(self)
         except:pass
         try:gdal.Unlink(self._fn)
+        except:pass
+
+class TemporaryDataset(Dataset):
+    def __init__(self,cols,rows,bands,datatype,srs='',gt=[],nodata=[]):
+        use_exceptions=gdal.GetUseExceptions()
+        gdal.UseExceptions()
+
+        try: #Test to see if enough memory
+            tmpdriver=gdal.GetDriverByName('MEM')
+            tmpds=tmpdriver.Create('',cols,rows,bands,datatype)
+            tmpds=None
+            del tmpds
+
+            self._filedescriptor=-1
+            self._filename='/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
+
+        except (RuntimeError,MemoryError):
+            self._filedescriptor,self._filename=tempfile.mkstemp(suffix='.tif')
+
+        self._driver=gdal.GetDriverByName('GTIFF')
+        self._dataset=self._driver.Create (self._filename,cols,rows,bands,datatype,['BIGTIFF=IF_SAFER'])
+
+        if not use_exceptions:gdal.DontUseExceptions()
+        self._dataset.SetGeoTransform(gt)
+        self._dataset.SetProjection(srs)
+        for i,val in enumerate(nodata[:bands]):
+            try:self._dataset.GetRasterBand(i+1).SetNoDataValue(val)
+            except TypeError:pass
+        Dataset.__init__(self)
+
+    def save(self,outpath,outformat='GTIFF',options=[]):
+        self.FlushCache()
+        ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
+        if ok:
+            driver=gdal.GetDriverByName(outformat)
+            ds=driver.CreateCopy(outpath,self._dataset,options=options)
+            ds=None
+            del ds
+            return Dataset(outpath)
+        else:raise RuntimeError('Output %s exists and overwrite is not set.'%outpath)
+
+    def write_data(self, data, x_off, y_off):
+        if data.ndim==2:
+            tmpbnd=self._dataset.GetRasterBand(1)
+            tmpbnd.WriteArray(data, x_off, y_off)
+        else:
+            for i in range(data.shape[0]):
+                tmpbnd=self._dataset.GetRasterBand(i+1)
+                tmpbnd.WriteArray(data[i,:,:], x_off, y_off)
+
+    def __del__(self):
+        self._dataset=None
+        del self._dataset
+        try:os.close(self._filedescriptor)
+        except:pass
+        try:self._driver.Delete(self._filename)
         except:pass
 
 class WarpedDataset(Dataset):
@@ -991,7 +974,7 @@ class WarpedDataset(Dataset):
         #Parse the XML,
         #use gdals built-in XML handling to reduce external dependencies
         vrttree = gdal.ParseXMLString(vrtxml)
-        getnodes=self.getnodes
+        getnodes=self.__getnodes__
 
         #Set new values
         rasterXSize = getnodes(vrttree, gdal.CXT_Attribute, 'rasterXSize')[0]
@@ -1030,6 +1013,35 @@ class WarpedDataset(Dataset):
         except:pass
         try:gdal.Unlink(self._simple_fn)
         except:pass
+
+class ArrayDataset(TemporaryDataset):
+    def __init__(self,array,extent=[],srs='',gt=[],nodata=[],prototype_ds=None):
+        use_exceptions=gdal.GetUseExceptions()
+        gdal.UseExceptions()
+
+        #datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.dtype.type)
+        #Work around numexpr issue #112 - http://code.google.com/p/numexpr/issues/detail?id=112
+        #until http://trac.osgeo.org/gdal/ticket/5223 is implemented.
+        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.view(str(array.dtype)).dtype.type)
+
+        if array.ndim==2:
+            rows,cols=array.shape
+            bands=1
+        else:
+            rows,cols,bands=array.shape
+
+        if prototype_ds:
+            if not gt:gt=prototype_ds._gt
+            if not srs:srs=prototype_ds._srs
+            if not nodata:nodata=prototype_ds._nodata
+
+        if extent:
+            xmin,ymin,xmax,ymax=extent
+            px,py=(xmax-xmin)/cols,(ymax-ymin)/rows
+            gt=[xmin,px,0,ymax,0,-py]
+
+        TemporaryDataset.__init__(self,cols,rows,bands,datatype,srs,gt,nodata)
+        self.write_data(array,0,0)
 
 class Stack(object):
     ''' Stub of basic implementation for a Stack of Band objects
