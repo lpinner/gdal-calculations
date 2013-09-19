@@ -568,6 +568,8 @@ def test_gdal_calculations_py_14():
         from gdal_calculations import Dataset, Env
         import numexpr as ne
 
+        Env.enable_numexpr=True
+
         f='data/tgc_geo.tif'
         ds1=Dataset(f)
         f='data/tgc_geo_resize.vrt'
@@ -607,6 +609,29 @@ def test_gdal_calculations_py_14():
         cleanup('numexpr')
 
 def test_gdal_calculations_py_15():
+    ''' Test numpy methods '''
+    try:
+        from gdal_calculations import Dataset, Env
+        Env.reproject=True
+
+        #Regular raster
+        f='data/tgc_geo.tif'
+        dsf=Dataset(f)
+        #Warped raster
+        f='data/tgc_alb.vrt'
+        dsw=Dataset(f)
+
+        out=np.sum([dsf,dsw])
+        out=np.mean([dsf,dsw])
+        return 'success'
+    except ImportError:
+        return 'skip'
+    except Exception as e:
+        return fail(e.message)
+    finally:
+        cleanup()
+
+def test_gdal_calculations_py_16():
     ''' Test commandline '''
     #In the unlikely event this code ever ends up _in_ GDAL, this function
     #will need modification to comply with standard GDAL script/sample paths
@@ -714,6 +739,7 @@ gdaltest_list = [
                  test_gdal_calculations_py_13,
                  test_gdal_calculations_py_14,
                  test_gdal_calculations_py_15,
+                 test_gdal_calculations_py_16,
                 ]
 
 if __name__ == '__main__':

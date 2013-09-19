@@ -39,6 +39,8 @@ class Env(object):
             cellsize
               - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
               - Default = "DEFAULT"
+            enable_numexpr
+              - this can break core numpy methods, such as numpy.sum([Dataset(foo),Dataset(bar)]
             extent
               - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
               - Default = "MINOF"
@@ -72,6 +74,7 @@ class Env(object):
     '''
 
     #Properties
+    enable_numexpr=False
     nodata=False
     overwrite=False
     progress=False
