@@ -233,17 +233,15 @@ class RasterLike(object):
     #===========================================================================
     def __ndarrayattribute__(self,attr):
         '''Pass attribute gets down to ndarray'''
-        if attr[:8] == '__array_' and Env.tiled:
-            raise RuntimeError('Env.tiled must be False to use numexpr.eval.')
-            #sys.stderr.write('Env.tiled must be False to use numexpr.eval.\n')
-            #return None
+        if attr[:8] == '__array_': return None
         if Env.tiled:
             '''Pass attribute gets down to the first block.
                Obviously won't work for b.shape etc...'''
             for b in self.ReadBlocksAsArray():
                 return getattr(b.data,attr)
         else:
-            return getattr(self.ReadAsArray(),attr)
+            data=self.ReadAsArray()
+            return getattr(data,attr)
 
     def __ndarraymethod__(self,attr):
         '''Pass method calls down to ndarrays and return a temporary dataset.'''
@@ -488,6 +486,11 @@ class Band(RasterLike):
 
         self.extent=self.__get_extent__()
 
+    def get_raster_band(self,*args,**kwargs):
+        '''So we can sort of treat Band and Dataset interchangeably'''
+        return self
+    GetRasterBand=get_raster_band
+
     def __getattr__(self, attr):
         '''Pass any other attribute or method calls
            through to the underlying GDALBand/ndarray objects'''
@@ -496,11 +499,6 @@ class Band(RasterLike):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
             else:return self.__ndarrayattribute__(attr)
         else:raise AttributeError("'Band' object has no attribute '%s'"%attr)
-
-    def get_raster_band(self,*args,**kwargs):
-        '''So we can sort of treat Band and Dataset interchangeably'''
-        return self
-    GetRasterBand=get_raster_band
 
 class Dataset(RasterLike):
     ''' Subclass a GDALDataset object without _actually_ subclassing it
@@ -549,7 +547,6 @@ class Dataset(RasterLike):
 
     def __getitem__(self, key):
         ''' Enable "somedataset[bandnum]" syntax'''
-        b=self._dataset.GetRasterBand(key+1)
         return Band(self._dataset.GetRasterBand(key+1),self, key) #GDAL Dataset Band indexing starts at 1
 
     def __delitem__(self, key):
