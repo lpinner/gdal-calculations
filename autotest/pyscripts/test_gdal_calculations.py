@@ -633,7 +633,8 @@ def test_gdal_calculations_py_15():
         #gdaltest.runexternal() doesn't read stderr
         ret = gdaltest.runexternal(script + ' --version --redirect-stderr').strip()
         assert ret==__version__,'Script version (%s) != %s'%(ret,__version__)
-        del ret
+        try:del ret
+        except:pass
 
         #Try running something that numexpr can handle
         #if numexpr is not available, this should be handled by standard python eval

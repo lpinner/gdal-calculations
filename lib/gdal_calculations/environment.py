@@ -64,7 +64,7 @@ class Env(object):
               - one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
               - Default = None
             tempdir
-              - temporary working directory
+              - temporary working directory, can be set to "/vsimem" for in-memory working
               - Default = tempfile.tempdir
             tiled
               - use tiled processing - True/False
@@ -198,12 +198,21 @@ class Env(object):
 
     @property
     def tempdir(self):
-        return tempfile.tempdir
+        try:return self._tempdir
+        except AttributeError:
+            self._tempdir=tempfile.tempdir
+            return self._tempdir
+        #return tempfile.tempdir
 
     @tempdir.setter
     def tempdir(self, value):
-        if not os.path.isdir(value):raise RuntimeError('%s is not a directory'%value)
-        tempfile.tempdir=value
+        if value.lower()=='/vsimem':
+            self._tempdir=value
+        elif not os.path.isdir(value):
+            raise RuntimeError('%s is not a directory'%value)
+        else:
+            tempfile.tempdir=value
+            self._tempdir=value
 
 Env=Env()
 

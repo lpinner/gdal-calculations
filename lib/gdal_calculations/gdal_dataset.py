@@ -105,24 +105,6 @@ class RasterLike(object):
     #===========================================================================
     #Private methods
     #===========================================================================
-    def __check_srs__(self,dataset1,dataset2):
-        srs=Env.srs
-        srs1=osr.SpatialReference(dataset1._srs)
-        srs2=osr.SpatialReference(dataset2._srs)
-
-        #Do we need to reproject?
-        if srs:
-            if not srs1.IsSame(srs):
-                dataset1=WarpedDataset(dataset1,srs.ExportToWkt(), Env.snap)
-            if not srs2.IsSame(srs):
-                dataset2=WarpedDataset(dataset2,srs.ExportToWkt(), dataset1)
-        elif not srs1.IsSame(srs2):
-            if  Env.reproject:
-                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1)
-            else:raise RuntimeError('Coordinate systems differ and Env.reproject==False')
-
-        return dataset1,dataset2
-
     def __check_cellsize__(self,dataset1,dataset2):
         #Do we need to resample?
         if Env.cellsize=='MAXOF':
@@ -175,6 +157,25 @@ class RasterLike(object):
 
         if dataset1.extent!=ext: dataset1=ClippedDataset(dataset1,ext)
         if dataset2.extent!=ext: dataset2=ClippedDataset(dataset2,ext)
+
+        return dataset1,dataset2
+
+    def __check_srs__(self,dataset1,dataset2):
+        srs=Env.srs
+
+        srs1=osr.SpatialReference(dataset1._srs)
+        srs2=osr.SpatialReference(dataset2._srs)
+
+        #Do we need to reproject?
+        if srs:
+            if not srs1.IsSame(srs):
+                dataset1=WarpedDataset(dataset1,srs.ExportToWkt(), Env.snap)
+            if not srs2.IsSame(srs):
+                dataset2=WarpedDataset(dataset2,srs.ExportToWkt(), dataset1)
+        elif not srs1.IsSame(srs2):
+            if  Env.reproject:
+                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1)
+            else:raise RuntimeError('Coordinate systems differ and Env.reproject==False')
 
         return dataset1,dataset2
 
@@ -266,8 +267,16 @@ class RasterLike(object):
                     else:nodata=self._nodata
 
                     data=getattr(b.data,attr)(*args,**kwargs)
+
+                    #Sanity check - returns array of same dimensions as block
+                    if data.shape!=(b.y_size,b.x_size):
+                        raise RuntimeError('When Env.tiled==True, the "%s" method is not supported.'%attr)
+
+                    #GDAL casts unknown types to Float64... bools don't need to be that big
+                    if data.dtype==np.bool:data=data.astype(np.uint8)
                     datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-                    if datatype is None:raise RuntimeError('Unsupported operation: %s'%attr)
+
+                    if datatype is None:raise RuntimeError('Unsupported operation: "%s"'%attr)
                     if not tmpds:
                         tmpds=TemporaryDataset(self._x_size,self._y_size,self._nbands,
                                                datatype,self._srs,self._gt, nodata)
@@ -276,6 +285,7 @@ class RasterLike(object):
 
             else:
                 data = self.ReadAsArray()
+                shape=data.shape
                 if Env.nodata:
                     if data.ndim==2:mask=(data==self._nodata[0])
                     else:mask=np.array([data[i,:,:]==self._nodata[i] for i in range(data.shape[0])])
@@ -285,6 +295,8 @@ class RasterLike(object):
                 else:nodata=self._nodata
 
                 data=getattr(data,attr)(*args,**kwargs)
+
+                if data.dtype==np.bool:data=data.astype(np.uint8)
                 if data.shape==(self._y_size,self._x_size):
                     datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
                     if datatype is None:
@@ -299,7 +311,8 @@ class RasterLike(object):
                     tmpds.write_data(data, 0, 0)
                 else:return data
 
-            tmpds.FlushCache()
+            try:tmpds.FlushCache() #Fails when file is in /vsimem
+            except:pass
             Env.progress.update_progress()
             return tmpds
 
@@ -341,7 +354,7 @@ class RasterLike(object):
                         data=op(b1.data, other)
                 else:
                     data=op(b1.data)
-
+                if data.dtype==np.bool:data=data.astype(np.uint8)
                 if not tmpds:
                     datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
                     if not datatype:datatype=gdal.GDT_Byte
@@ -376,13 +389,15 @@ class RasterLike(object):
             else:
                 data=op(a1)
 
+            if data.dtype==np.bool:data=data.astype(np.uint8)
             datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
             if not datatype:datatype=gdal.GDT_Byte
             tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
                                    datatype,dataset1._srs,dataset1._gt,nodata)
             tmpds.write_data(data, 0, 0)
 
-        tmpds.FlushCache()
+        try:tmpds.FlushCache()
+        except:pass
         Env.progress.update_progress()
         return tmpds
 
@@ -480,6 +495,7 @@ class Band(RasterLike):
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
             else:return self.__ndarrayattribute__(attr)
+        else:raise AttributeError("'Band' object has no attribute '%s'"%attr)
 
     def get_raster_band(self,*args,**kwargs):
         '''So we can sort of treat Band and Dataset interchangeably'''
@@ -529,6 +545,7 @@ class Dataset(RasterLike):
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
             else:return self.__ndarrayattribute__(attr)
+        else:raise AttributeError("'Dataset' object has no attribute '%s'"%attr)
 
     def __getitem__(self, key):
         ''' Enable "somedataset[bandnum]" syntax'''
@@ -815,7 +832,8 @@ class TemporaryDataset(Dataset):
         use_exceptions=gdal.GetUseExceptions()
         gdal.UseExceptions()
 
-        try: #Test to see if enough memory
+        if Env.tempdir == '/vsimem':
+            #Test to see if enough memory
             tmpdriver=gdal.GetDriverByName('MEM')
             tmpds=tmpdriver.Create('',cols,rows,bands,datatype)
             tmpds=None
@@ -824,7 +842,7 @@ class TemporaryDataset(Dataset):
             self._filedescriptor=-1
             self._filename='/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
 
-        except (RuntimeError,MemoryError):
+        else:
             self._filedescriptor,self._filename=tempfile.mkstemp(suffix='.tif')
 
         self._driver=gdal.GetDriverByName('GTIFF')
@@ -839,7 +857,8 @@ class TemporaryDataset(Dataset):
         Dataset.__init__(self)
 
     def save(self,outpath,outformat='GTIFF',options=[]):
-        self.FlushCache()
+        try:self.FlushCache()
+        except:pass
         ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
         if ok:
             driver=gdal.GetDriverByName(outformat)
