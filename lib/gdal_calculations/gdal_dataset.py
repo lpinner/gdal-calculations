@@ -699,7 +699,7 @@ class ClippedDataset(Dataset):
 
             try: #Populate <NODATA> element with band NoDataValue as it might not be 0
                 NODATA=getnodes(node[sourcekey], gdal.CXT_Element, 'NODATA')[0]
-                node[sourcekey][NODATA]=nodata
+                node[sourcekey][NODATA][2][1]=nodata
             except IndexError:
                 node[sourcekey].append([gdal.CXT_Element, 'NODATA', [gdal.CXT_Text, nodata]])
 
@@ -1079,8 +1079,11 @@ class DatasetStack(Stack):
     '''
     def __init__(self,filepaths, band=1):
         self._bands = []
-        for f in filepaths:
+        self._datasets = []
+        a=Dataset(filepaths[0])
+        for f in filepaths[1:]:
             d=Dataset(f)
+            a,d=a.apply_environment(d)
             b=d.GetRasterBand(band)
             self._bands.append(b)
 
