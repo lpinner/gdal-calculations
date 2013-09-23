@@ -30,14 +30,15 @@ Notes: - see __init__.py
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-__all__ = [ "Dataset", "ArrayDataset",
+__all__ = [ "Dataset",          "ArrayDataset",
             "ConvertedDataset", "ClippedDataset",
-            "WarpedDataset"
+            "WarpedDataset",    "DatasetStack",
+            "TemporaryDataset"
           ]
 
 import numpy as np
 from osgeo import gdal, gdal_array, osr
-import os, tempfile, operator, itertools, sys
+import os, tempfile, operator, sys
 
 from environment import Env,Progress
 import geometry
@@ -583,9 +584,6 @@ class Dataset(RasterLike):
     #CamelCase synonym
     BandReadBlocksAsArray=band_read_blocks_as_array
 
-##    def Stack(self):
-##        return Stack([Band(self.GetRasterBand(i+1),self, i) for i in xrange(self.RasterCount)])
-
 class ClippedDataset(Dataset):
     '''Use a VRT to "clip" to min extent of two rasters'''
 
@@ -1066,18 +1064,8 @@ class ArrayDataset(TemporaryDataset):
         TemporaryDataset.__init__(self,cols,rows,bands,datatype,srs,gt,nodata)
         self.write_data(array,0,0)
 
-##class Stack(object):
-##    ''' Stub of basic implementation for a Stack of Band objects
-##    '''
-##    def __init__(self,bands):
-##        self._bands = bands
-##
-##    def ReadBlocksAsArray(self,nblocks=1):
-##        for bands in itertools.izip(*[band.ReadBlocksAsArray(nblocks) for band in self._bands]):
-##            yield np.dstack(bands.data)
-
 class DatasetStack(Dataset):
-    ''' Stub of basic implementation for a Stack of Band objects from multiple datasets
+    ''' Stack of bands from multiple datasets
     '''
     def __init__(self, filepaths, band=0):
         self._datasets=[]#So they don't go out of scope and get GC'd

@@ -155,6 +155,7 @@ def main():
     argparser.add_argument('--cellsize', dest='cellsize', default='DEFAULT', help='Output extent - one of "DEFAULT", "MINOF", "MAXOF", "xres yres" , xyres')
     argparser.add_argument('--extent', dest='extent', default='MINOF', help='Output extent - one of "MINOF", "INTERSECT", "MAXOF", "UNION", "xmin ymin xmax ymax"')
     argparser.add_argument("--nodata", dest="nodata", default=False, action='store_true', help='Account for nodata  (Note this uses masked arrays which can be much slower)')
+    argparser.add_argument("--numexpr", dest="enable_numexpr", default=False, action='store_true', help='Enable numexpr')
     argparser.add_argument('--overwrite', dest='overwrite', default=False, action='store_true', help='Overwrite output file if it already exists')
     argparser.add_argument('--reproject', dest='reproject', default=False, action='store_true', help='Reproject input rasters if required (datasets are projected to the SRS of the first input dataset in an expression)')
     argparser.add_argument('--resampling', dest='resampling', default='NEAREST', help='Resampling type when reprojecting - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)')
@@ -169,6 +170,7 @@ def main():
     try:Env.extent=map(float,args.extent.split())
     except:Env.extent=args.extent
     Env.nodata=args.nodata
+    Env.enable_numexpr=args.enable_numexpr
     Env.overwrite=args.overwrite
     Env.reproject=args.reproject
     try:Env.resampling=int(args.resampling)
@@ -201,10 +203,12 @@ def main():
 
     #Run the calculation
     try:
-        #numexpr is sooo much quicker...
-        #but can't use expressions like 'a[2]' or 'a.GetRasterBand(3)'
-        import numexpr
-        outfile=ArrayDataset(numexpr.evaluate(args.calc), prototype_ds=datasets[0])
+        if args.enable_numexpr:
+            #numexpr is sooo much quicker...
+            #but can't use expressions like 'a[2]' or 'a.GetRasterBand(3)'
+            import numexpr
+            outfile=ArrayDataset(numexpr.evaluate(args.calc), prototype_ds=datasets[0])
+        else:raise
     except:
         outfile = eval(args.calc)
 
