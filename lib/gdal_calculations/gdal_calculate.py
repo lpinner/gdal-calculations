@@ -38,6 +38,7 @@ Optional parameters:
                        uses numpy.ma.MaskedArray to handle NoData values
                        MaskedArrays can be much slower...
      --notile        : don't use tiled processing, faster but uses more memory (Default=False)
+     --numexpr       : try to evaluate the expression with numexpr  (Default=False)
      --overwrite     : overwrite if required (Default=False)
      --reproject     : reproject if required (Default=False)
                        datasets are projected to the SRS of the first input
@@ -206,9 +207,10 @@ def main():
         if args.enable_numexpr:
             #numexpr is sooo much quicker...
             #but can't use expressions like 'a[2]' or 'a.GetRasterBand(3)'
+            #and no extent/cellsize/srs differences are handled
             import numexpr
             outfile=ArrayDataset(numexpr.evaluate(args.calc), prototype_ds=datasets[0])
-        else:raise
+        else:raise Exception
     except:
         outfile = eval(args.calc)
 
