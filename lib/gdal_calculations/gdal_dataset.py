@@ -583,8 +583,8 @@ class Dataset(RasterLike):
     #CamelCase synonym
     BandReadBlocksAsArray=band_read_blocks_as_array
 
-    def Stack(self):
-        return Stack([Band(self.GetRasterBand(i+1),self, i) for i in xrange(self.RasterCount)])
+##    def Stack(self):
+##        return Stack([Band(self.GetRasterBand(i+1),self, i) for i in xrange(self.RasterCount)])
 
 class ClippedDataset(Dataset):
     '''Use a VRT to "clip" to min extent of two rasters'''
@@ -707,7 +707,9 @@ class ClippedDataset(Dataset):
 
         #Open new clipped dataset
         vrtxml=gdal.SerializeXMLTree(vrttree)
-        self._dataset=gdal.Open(vrtxml)
+        self._filename='/vsimem/%s.vrt'%tempfile._RandomNameSequence().next()
+        self.__write_vsimem__(self._filename,vrtxml)
+        self._dataset=gdal.Open(self._filename)
 
         if not use_exceptions:gdal.DontUseExceptions()
 
@@ -749,7 +751,7 @@ class ClippedDataset(Dataset):
         return (int(xoff+0.5),int(yoff+0.5),int(xsize+0.5),int(ysize+0.5))
 
     def __del__(self):
-        try:self._dataset.GetDriver().Delete(self._dataset.GetDescription())
+        try:gdal.Unlink(self._filename)
         except:pass
         self._dataset=None
         del self._dataset
@@ -1064,28 +1066,75 @@ class ArrayDataset(TemporaryDataset):
         TemporaryDataset.__init__(self,cols,rows,bands,datatype,srs,gt,nodata)
         self.write_data(array,0,0)
 
-class Stack(object):
-    ''' Stub of basic implementation for a Stack of Band objects
-    '''
-    def __init__(self,bands):
-        self._bands = bands
+##class Stack(object):
+##    ''' Stub of basic implementation for a Stack of Band objects
+##    '''
+##    def __init__(self,bands):
+##        self._bands = bands
+##
+##    def ReadBlocksAsArray(self,nblocks=1):
+##        for bands in itertools.izip(*[band.ReadBlocksAsArray(nblocks) for band in self._bands]):
+##            yield np.dstack(bands.data)
 
-    def ReadBlocksAsArray(self,nblocks=1):
-        for bands in itertools.izip(*[band.ReadBlocksAsArray(nblocks) for band in self._bands]):
-            yield np.dstack(bands.data)
-
-class DatasetStack(Stack):
+class DatasetStack(Dataset):
     ''' Stub of basic implementation for a Stack of Band objects from multiple datasets
     '''
-    def __init__(self,filepaths, band=1):
-        self._bands = []
-        self._datasets = []
-        a=Dataset(filepaths[0])
+    def __init__(self, filepaths, band=0):
+        self._datasets=[]#So they don't go out of scope and get GC'd
+
+        #Get a reference dataset so can apply env setting to all datasets
+        reference_ds=Dataset(filepaths[0])
         for f in filepaths[1:]:
             d=Dataset(f)
-            a,d=a.apply_environment(d)
-            b=d.GetRasterBand(band)
-            self._bands.append(b)
+            reference_ds,d=reference_ds.apply_environment(d)
+
+        vrtxml=self.buildvrt(reference_ds, filepaths, band)
+        ds=gdal.Open(vrtxml)
+
+        #Temp in memory VRT file
+        self._filename='/vsimem/%s.vrt'%tempfile._RandomNameSequence().next()
+        driver=gdal.GetDriverByName('VRT')
+        self._dataset=driver.CreateCopy(self._filename,ds)
+        del ds,driver
+
+        Dataset.__init__(self)
+
+    def buildvrt(self, reference_ds, filepaths, band):
+        ''' Create a simple VRT stack'''
+        vrt=[]
+        vrt.append('<VRTDataset rasterXSize="%s" rasterYSize="%s">' % (reference_ds.RasterXSize,reference_ds.RasterYSize))
+        vrt.append('  <SRS>%s</SRS>' % reference_ds.GetProjection())
+        vrt.append('  <GeoTransform>%s</GeoTransform>' % ', '.join(map(str,reference_ds.GetGeoTransform())))
+
+        for f in filepaths:
+            d=Dataset(f)
+            reference_ds,d=reference_ds.apply_environment(d)
+            self._datasets.append(d)
+
+            rb=d.GetRasterBand(band+1) #gdal band index start at 1
+            nodata=rb.GetNoDataValue()
+            path=d.GetDescription()
+            rel=not os.path.isabs(path)
+            vrt.append('  <VRTRasterBand dataType="%s" band="%s">' % (gdal.GetDataTypeName(rb.DataType), band+1))
+            vrt.append('    <SimpleSource>')
+            vrt.append('      <SourceFilename relativeToVRT="%s">%s</SourceFilename>' % (int(rel),path))
+            vrt.append('      <SourceBand>%s</SourceBand>'%(band+1))
+            vrt.append('      <SrcRect xOff="0" yOff="0" xSize="%s" ySize="%s" />' % (d.RasterXSize,d.RasterYSize))
+            vrt.append('      <DstRect xOff="0" yOff="0" xSize="%s" ySize="%s" />' % (d.RasterXSize,d.RasterYSize))
+            vrt.append('    </SimpleSource>')
+            if nodata is not None: # 0 is a valid value
+                vrt.append('    <NoDataValue>%s</NoDataValue>' % nodata)
+            vrt.append('  </VRTRasterBand>')
+        vrt.append('</VRTDataset>')
+
+        vrt='\n'.join(vrt)
+        return vrt
+
+    def __del__(self):
+        self._dataset=None
+        del self._dataset
+        try:gdal.Unlink(self._filename)
+        except:pass
 
 if __name__=='__main__':
     #Examples
