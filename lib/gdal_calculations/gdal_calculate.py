@@ -38,7 +38,7 @@ Optional parameters:
                        uses numpy.ma.MaskedArray to handle NoData values
                        MaskedArrays can be much slower...
      --notile        : don't use tiled processing, faster but uses more memory (Default=False)
-     --numexpr       : try to evaluate the expression with numexpr  (Default=False)
+     --numexpr       : Enable numexpr evaluation (Default=False)
      --overwrite     : overwrite if required (Default=False)
      --reproject     : reproject if required (Default=False)
                        datasets are projected to the SRS of the first input
@@ -156,13 +156,13 @@ def main():
     argparser.add_argument('--cellsize', dest='cellsize', default='DEFAULT', help='Output extent - one of "DEFAULT", "MINOF", "MAXOF", "xres yres" , xyres')
     argparser.add_argument('--extent', dest='extent', default='MINOF', help='Output extent - one of "MINOF", "INTERSECT", "MAXOF", "UNION", "xmin ymin xmax ymax"')
     argparser.add_argument("--nodata", dest="nodata", default=False, action='store_true', help='Account for nodata  (Note this uses masked arrays which can be much slower)')
+    argparser.add_argument("--notile", dest='notile', default=False, action='store_true', help='Don\'t use tiled processing - True/False')
     argparser.add_argument("--numexpr", dest="enable_numexpr", default=False, action='store_true', help='Enable numexpr')
     argparser.add_argument('--overwrite', dest='overwrite', default=False, action='store_true', help='Overwrite output file if it already exists')
     argparser.add_argument('--reproject', dest='reproject', default=False, action='store_true', help='Reproject input rasters if required (datasets are projected to the SRS of the first input dataset in an expression)')
     argparser.add_argument('--resampling', dest='resampling', default='NEAREST', help='Resampling type when reprojecting - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)')
     argparser.add_argument('--snap', dest='snap', default='', help='Filepath of a raster to snap extent coordinates to')
     argparser.add_argument('--tempdir', dest='tempdir', default=tempfile.gettempdir(), help='Temp working directory')
-    argparser.add_argument("--notile", dest='notile', default=False, action='store_true', help='Don\'t use tiled processing - True/False')
 
     args, rasters = argparser.parse_known_args()
 

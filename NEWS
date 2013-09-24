@@ -1,3 +1,18 @@
+= GDAL Calculations 0.6 2013-09-23 (AEST) =
+
+== Additions ==
+Env: add ntiles (number of tiles to process at once) and enable_numexpr attributes
+gdal_calculate: add --numexpr flag
+
+== Fixes ==
+Fix segfault in ClippedDataset caused by setting NoData node incorrectly
+Work around issues with numpy methods and __array_struct__ attribute calls.
+Fix passing some datasets to numpy functions
+Make /vsimem processing optional and set with Env.tempdir
+Handle np.bool types without gdal autocasting to float64
+More informative error when getattr fails
+Refactor gdal_dataset.RasterLike.apply_environment
+
 = GDAL Calculations 0.5 2013-09-14 (AEST) =
 
 == Additions ==

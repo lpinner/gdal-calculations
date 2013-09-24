@@ -41,6 +41,7 @@ class Env(object):
               - Default = "DEFAULT"
             enable_numexpr
               - this can break core numpy methods, such as numpy.sum([Dataset(foo),Dataset(bar)]
+              - Default = False
             extent
               - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
               - Default = "MINOF"
