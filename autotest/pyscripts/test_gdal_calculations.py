@@ -30,6 +30,7 @@ import sys
 import os
 import shutil
 import tempfile
+import traceback
 import numpy as np
 from osgeo import gdal, osr
 
@@ -47,8 +48,8 @@ def test_gdal_calculations_py_1():
         import gdal_calculations
         from gdal_calculations import Dataset
         return 'success'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_2():
@@ -151,8 +152,8 @@ def test_gdal_calculations_py_2():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_3():
@@ -174,8 +175,8 @@ def test_gdal_calculations_py_3():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_4():
@@ -201,6 +202,14 @@ def test_gdal_calculations_py_4():
         #__getattr__ np attribute
         assert dsf.shape==(40,100), "dsf.shape==%s"%repr(dsf.shape)
 
+        #ReadBlocksAsArray() (gdal_calculations.Dataset method)
+        Env.ntiles=2
+        for block in dsf.ReadBlocksAsArray():
+            assert block.data.shape==(80,100), "data.shape==%s"%repr(block.data.shape)
+            break
+        del block
+        Env.ntiles=1
+
         #__getattr__ np method that doesn't return a temp dataset
         Env.tiled=False
         s=dsf.sum()
@@ -224,8 +233,8 @@ def test_gdal_calculations_py_4():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_5():
@@ -277,8 +286,8 @@ def test_gdal_calculations_py_5():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_6():
@@ -300,8 +309,8 @@ def test_gdal_calculations_py_6():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_7():
@@ -380,8 +389,8 @@ def test_gdal_calculations_py_8():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_9():
@@ -440,8 +449,8 @@ def test_gdal_calculations_py_9():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_10():
@@ -468,8 +477,8 @@ def test_gdal_calculations_py_10():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_11():
@@ -496,8 +505,8 @@ def test_gdal_calculations_py_11():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_12():
@@ -520,8 +529,8 @@ def test_gdal_calculations_py_12():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_13():
@@ -558,8 +567,8 @@ def test_gdal_calculations_py_13():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:cleanup()
 
 def test_gdal_calculations_py_14():
@@ -578,7 +587,7 @@ def test_gdal_calculations_py_14():
         #Must not be tiled for numexpr
         try:ne.evaluate('ds1+1')
         except:pass
-        else:fail('numexpr.evaluate succeeded and Env.tiled=True')
+        else:raise Exception('numexpr.evaluate succeeded and Env.tiled=True')
         Env.tiled=False
         out=ne.evaluate('ds1+1') #returns a numpy ndarray
         assert out.shape==(ds1.RasterXSize,ds1.RasterYSize), "out.shape == %s not %s"% \
@@ -587,13 +596,13 @@ def test_gdal_calculations_py_14():
         #No subscripting or methods in the expression
         try:ne.evaluate('Float32(ds1[0])+1')
         except:pass
-        else:fail('numexpr.evaluate succeeded and with subscripting / methods in the expression')
+        else:raise Exception('numexpr.evaluate succeeded and with subscripting / methods in the expression')
 
         #Must be same coordinate systems and dimensions
         #The apply_environment method will reproject/resample/clip if required
         try:ne.evaluate('ds1+ds2')
         except:pass
-        else:fail('numexpr.evaluate succeeded when ds1 and ds2 extents differ')
+        else:raise Exception('numexpr.evaluate succeeded when ds1 and ds2 extents differ')
         ds3,ds4=ds1.apply_environment(ds2)
         out=ne.evaluate('ds3+ds4') #returns a numpy ndarray
         assert out.shape==(ds1.RasterXSize,ds1.RasterYSize), "out.shape == %s not %s"% \
@@ -602,8 +611,8 @@ def test_gdal_calculations_py_14():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:
         cleanup()
         cleanup('numexpr')
@@ -626,8 +635,8 @@ def test_gdal_calculations_py_15():
         return 'success'
     except ImportError:
         return 'skip'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:
         cleanup()
 
@@ -695,14 +704,20 @@ def test_gdal_calculations_py_16():
 
 
         return 'success'
-    except Exception as e:
-        return fail(e.message)
+    except:
+        return fail()
     finally:
         os.chdir(cd)
         cleanup()
 
 #-----------------------------------------------------------
-def fail(reason):
+def fail(reason=''):
+    exc_type, exc_value, exc_tb=sys.exc_info()
+    if exc_tb is not None:
+        reason=traceback.format_exception_only(
+            exc_type,
+            '%s (line: %s)'%(exc_value.message,exc_tb.tb_lineno)
+        )[0].strip()
     gdaltest.post_reason(reason)
     return 'fail'
 

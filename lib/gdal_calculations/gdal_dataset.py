@@ -80,11 +80,12 @@ class RasterLike(object):
         return dataset1,dataset2
     check_extent=apply_environment #synonym for backwards compatability with v. <0.5
 
-    def read_blocks_as_array(self,nblocks=1):
+    def read_blocks_as_array(self, nblocks=None):
         '''Read GDAL Datasets/Bands block by block'''
 
         ncols=self._x_size
         nrows=self._y_size
+        if nblocks is None:nblocks=Env.ntiles
         xblock,yblock=self._block_size
 
         if xblock==ncols:
@@ -1077,13 +1078,11 @@ class DatasetStack(Dataset):
             reference_ds,d=reference_ds.apply_environment(d)
 
         vrtxml=self.buildvrt(reference_ds, filepaths, band)
-        ds=gdal.Open(vrtxml)
 
         #Temp in memory VRT file
         self._filename='/vsimem/%s.vrt'%tempfile._RandomNameSequence().next()
-        driver=gdal.GetDriverByName('VRT')
-        self._dataset=driver.CreateCopy(self._filename,ds)
-        del ds,driver
+        self.__write_vsimem__(self._filename,vrtxml)
+        self._dataset=gdal.Open(self._filename)
 
         Dataset.__init__(self)
 

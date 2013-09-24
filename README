@@ -104,6 +104,9 @@ And a raster calculations library:
                 nodata
                   - handle nodata using masked arrays - True/False
                   - Default = False
+                ntiles
+                  - number of tiles to process at a time
+                  - Default = 1
                 overwrite
                   - overwrite if required - True/False
                   - Default = False

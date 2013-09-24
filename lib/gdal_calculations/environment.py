@@ -47,6 +47,9 @@ class Env(object):
             nodata
               - handle nodata using masked arrays - True/False
               - Default = False
+            ntiles
+              - number of tiles to process at a time
+              - Default = 1
             overwrite
               - overwrite if required - True/False
               - Default = False
@@ -76,6 +79,7 @@ class Env(object):
     #Properties
     enable_numexpr=False
     nodata=False
+    ntiles=1
     overwrite=False
     progress=False
     reproject=False
