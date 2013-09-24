@@ -37,12 +37,18 @@ Classes/Objects:
             cellsize
               - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
               - Default = "DEFAULT"
+            enable_numexpr
+              - this can break core numpy methods, such as numpy.sum([Dataset(foo),Dataset(bar)]
+              - Default = False
             extent
               - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
               - Default = "MINOF"
             nodata
               - handle nodata using masked arrays - True/False
               - Default = False
+            ntiles
+              - number of tiles to process at a time
+              - Default = 1
             overwrite
               - overwrite if required - True/False
               - Default = False
