@@ -342,7 +342,7 @@ class RasterLike(object):
                     nodata=[dataset1._nodata[0]]*dataset1._nbands
                 else:nodata=dataset1._nodata
 
-                if other:
+                if other is not None: #zero is valid
                     if isinstance(other,RasterLike):
                         b2=Block(dataset2,b1.x_off, b1.y_off,b1.x_size, b1.y_size)
 
