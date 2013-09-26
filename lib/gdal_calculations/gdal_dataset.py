@@ -80,6 +80,16 @@ class RasterLike(object):
         return dataset1,dataset2
     check_extent=apply_environment #synonym for backwards compatability with v. <0.5
 
+    def create_copy(self,outpath,outformat='GTIFF',options=[]):
+        ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
+        if ok:
+            driver=gdal.GetDriverByName(outformat)
+            ds=driver.CreateCopy(outpath,self._dataset,options=options)
+            ds=None
+            del ds
+            return Dataset(outpath)
+        else:raise RuntimeError('Output %s exists and overwrite is not set.'%outpath)
+
     def read_blocks_as_array(self, nblocks=None):
         '''Read GDAL Datasets/Bands block by block'''
 
@@ -277,13 +287,16 @@ class RasterLike(object):
                     if data.shape!=(b.y_size,b.x_size):
                         raise RuntimeError('When Env.tiled==True, the "%s" method is not supported.'%attr)
 
-                    #GDAL casts unknown types to Float64... bools don't need to be that big
-                    if data.dtype==np.bool:data=data.astype(np.uint8)
-                    datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-
-                    if datatype is None:raise RuntimeError('Unsupported operation: "%s"'%attr)
                     if not tmpds:
-                        tmpds=TemporaryDataset(self._x_size,self._y_size,self._nbands,
+                        #GDAL casts unknown types to Float64... bools don't need to be that big
+                        if data.dtype==np.bool:data=data.astype(np.uint8)
+                        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
+
+                        if datatype is None:raise RuntimeError('Unsupported operation: "%s"'%attr)
+                        if data.ndim==2:nbands=1
+                        else:nbands=data.shape[0]
+
+                        tmpds=TemporaryDataset(self._x_size,self._y_size,nbands,
                                                datatype,self._srs,self._gt, nodata)
 
                     tmpds.write_data(data, b.x_off, b.y_off)
@@ -859,17 +872,11 @@ class TemporaryDataset(Dataset):
             except TypeError:pass
         Dataset.__init__(self)
 
-    def save(self,outpath,outformat='GTIFF',options=[]):
+    def create_copy(self,outpath,outformat='GTIFF',options=[]):
         try:self.FlushCache()
         except:pass
-        ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
-        if ok:
-            driver=gdal.GetDriverByName(outformat)
-            ds=driver.CreateCopy(outpath,self._dataset,options=options)
-            ds=None
-            del ds
-            return Dataset(outpath)
-        else:raise RuntimeError('Output %s exists and overwrite is not set.'%outpath)
+        return Dataset.create_copy(self,outpath,outformat,options)
+    save=create_copy #synonym for backwards compatibility
 
     def write_data(self, data, x_off, y_off):
         if data.ndim==2:
