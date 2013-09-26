@@ -376,7 +376,7 @@ class RasterLike(object):
                 nodata=[dataset1._nodata[0]]*dataset1._nbands
             else:nodata=dataset1._nodata
 
-            if other:
+            if other is not None:
                 if isinstance(other,RasterLike):
                     a2 = dataset2.ReadAsArray()
 
