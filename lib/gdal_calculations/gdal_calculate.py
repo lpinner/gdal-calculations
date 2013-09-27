@@ -50,7 +50,7 @@ Optional parameters:
     --srs            : the output spatial reference system
                        one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
                        (Default = None)
-    --tempdir        : filepath to temporary working directory
+    --tempdir        : filepath to temporary working directory (can also use /vsimem for in memory tempdir)
 
 
 Example:

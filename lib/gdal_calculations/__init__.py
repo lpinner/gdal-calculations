@@ -169,7 +169,7 @@ Examples:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-__version__='0.7dev'
+__version__='0.8dev'
 
 from gdal_dataset import *
 from conversions import *
