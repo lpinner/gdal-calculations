@@ -40,6 +40,7 @@ Optional parameters:
      --notile        : don't use tiled processing, faster but uses more memory (Default=False)
      --numexpr       : Enable numexpr evaluation (Default=False)
      --overwrite     : overwrite if required (Default=False)
+     -q --quiet      : Don't display progress (Default=False)
      --reproject     : reproject if required (Default=False)
                        datasets are projected to the SRS of the first input
                        dataset in an expression
