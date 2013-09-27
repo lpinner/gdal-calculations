@@ -1,34 +1,48 @@
-= GDAL Calculations 0.6 2013-09-23 (AEST) =
+GDAL Calculations 0.7 2013-09-27 (AEST)
+=======================================
+Fixes
+-----
+* Fix megabug in operations with scalars where Dataset/Band objects are the right operands
+* Set correct no. of bands for ndarray operations
+* Enable operations with zero as the other operand
 
-== Additions ==
-Env: add ntiles (number of tiles to process at once) and enable_numexpr attributes
-gdal_calculate: add --numexpr flag
+GDAL Calculations 0.6 2013-09-23 (AEST)
+=======================================
+Additions
+---------
+* Env: add ntiles (number of tiles to process at once) and enable_numexpr attributes
+* gdal_calculate: add --numexpr flag
 
-== Fixes ==
-Fix segfault in ClippedDataset caused by setting NoData node incorrectly
-Work around issues with numpy methods and __array_struct__ attribute calls.
-Fix passing some datasets to numpy functions
-Make /vsimem processing optional and set with Env.tempdir
-Handle np.bool types without gdal autocasting to float64
-More informative error when getattr fails
-Refactor gdal_dataset.RasterLike.apply_environment
+Fixes
+-----
+* Fix segfault in ClippedDataset caused by setting NoData node incorrectly
+* Work around issues with numpy methods and __array_struct__ attribute calls.
+* Fix passing some datasets to numpy functions
+* Make /vsimem processing optional and set with Env.tempdir
+* Handle np.bool types without gdal autocasting to float64
+* More informative error when getattr fails
+* Refactor gdal_dataset.RasterLike.apply_environment
 
-= GDAL Calculations 0.5 2013-09-14 (AEST) =
-
-== Additions ==
+GDAL Calculations 0.5 2013-09-14 (AEST)
+=======================================
+Additions
+---------
 * Added srs to environment setting
 
-== Fixes ==
+Fixes
+-----
 * Fix some bugs found autotesting
 
-= GDAL Calculations 0.4 2013-09-11 (AEST) =
-
-== Additions ==
+GDAL Calculations 0.4 2013-09-11 (AEST)
+=======================================
+Additions
+---------
 * Added snap to dataset environment setting
 * Added cellsize environment setting
 * Added autotest script and test data
 
-== Fixes ==
+Fixes
+-----
 * Fixed clipped temp datasets bug
 * Fix extent handling bug
 * Handle warped VRTs
