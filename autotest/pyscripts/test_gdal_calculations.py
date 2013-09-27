@@ -293,25 +293,138 @@ def test_gdal_calculations_py_5():
 def test_gdal_calculations_py_6():
     ''' Test some arithmetic '''
     try:
-        from gdal_calculations import Dataset
+        from gdal_calculations import Dataset,Int16
 
         #Regular raster
         f='data/tgc_geo.tif'
         dsf=Dataset(f)
 
-        val=dsf.ReadAsArray(0, 0, 1, 1)
-        assert val==1, "dsf.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
-        newds=(dsf[0]*2+1)/1
-        val=newds.ReadAsArray(0, 0, 1, 1)
-        assert val==3, "newds.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #original values
+        assert dsf.ReadAsArray(0, 0, 1, 1)==1, "dsf.ReadAsArray(0, 0, 1, 1)!=1"
+        assert dsf.ReadAsArray(1, 0, 1, 1)==2, "dsf.ReadAsArray(1, 0, 1, 1)!=2"
+        assert dsf.ReadAsArray(55,2,1,1)==256, "dsf.ReadAsArray(55,2,1,1)!=256"
 
-        dsf,newds=None,None
+        #===========================================================================
+        #Arithmetic operations
+        #===========================================================================
+        #__add__
+        val=(dsf+1).ReadAsArray(0, 0, 1, 1)
+        assert val==2, "(dsf+1).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #__sub__ and __rsub__
+        val=(dsf-1).ReadAsArray(0, 0, 1, 1)
+        assert val==0, "(dsf-1).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=(10 - dsf).ReadAsArray(0, 0, 1, 1)
+        assert val==9, "(10-dsf).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #__mul__
+        val=(dsf*2).ReadAsArray(0, 0, 1, 1)
+        assert val==2, "(dsf*2).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #__div__ and __rdiv__
+        val=(dsf/2).ReadAsArray(0, 0, 1, 1)
+        assert val==0, "(dsf/2).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=(2/dsf).ReadAsArray(0, 0, 1, 1)
+        assert val==2, "(2/dsf).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #__truediv__
+        ##Can't do `from __future__ import division` except at the top of the script
+        import __future__
+        expr=compile('(dsf/2).ReadAsArray(0, 0, 1, 1)','','eval',__future__.CO_FUTURE_DIVISION)
+        val=eval(expr)
+        assert val==0.5, "(dsf/2).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        expr=compile('(2/dsf).ReadAsArray(0, 0, 1, 1)','','eval',__future__.CO_FUTURE_DIVISION)
+        val=eval(expr)
+        assert val==2, "(2/dsf).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #__floordiv__ and __rfloordiv__
+        val=(dsf//2).ReadAsArray(0, 0, 1, 1)
+        assert val==0, "(dsf//2).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=(2//dsf).ReadAsArray(0, 0, 1, 1)
+        assert val==2, "(2//dsf).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        #__mod__ and __rmod__
+        val=(dsf % 1.5).ReadAsArray(1, 0, 1, 1)
+        assert val==0.5, "(dsf % 1.5).ReadAsArray(1, 0, 1, 1)==%s"%repr(val)
+        val=(1.5%dsf).ReadAsArray(1, 0, 1, 1)
+        assert val==1.5, "(dsf % 1.5).ReadAsArray(1, 0, 1, 1)==%s"%repr(val)
+        #__pow__ and __rpow__
+        val=(dsf ** 2).ReadAsArray(2, 0, 1, 1)
+        assert val==9, "(dsf ** 2).ReadAsArray(2, 0, 1, 1)==%s"%repr(val)
+        val=(2 ** dsf).ReadAsArray(2, 0, 1, 1)
+        assert val==8, "(2 ** dsf).ReadAsArray(2, 0, 1, 1)==%s"%repr(val)
+        #__neg__
+        val=-dsf.ReadAsArray(0, 0, 1, 1)
+        assert val==65535, "-dsf.ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=-Int16(dsf).ReadAsArray(0, 0, 1, 1)
+        assert val==-1, "-Int16(dsf).ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        #===========================================================================
+        #Bitwise operations
+        #===========================================================================
+        #__and__ and __rand__
+        val=(dsf & 3).ReadAsArray(4,0,1,1)
+        assert val==1, "(dsf&3).ReadAsArray(4,0,1,1)==%s"%repr(val)
+        val=(3 & dsf).ReadAsArray(4,0,1,1)
+        assert val==1, "(3&dsf).ReadAsArray(4,0,1,1)==%s"%repr(val)
+        #__or__ and __ror__
+        val=(dsf & 3).ReadAsArray(4,0,1,1)
+        assert val==1, "(dsf&3).ReadAsArray(4,0,1,1)==%s"%repr(val)
+        val=(3 & dsf).ReadAsArray(4,0,1,1)
+        assert val==1, "(3&dsf).ReadAsArray(4,0,1,1)==%s"%repr(val)
+        #__lshift__ and __rlshift__
+        val=(dsf<<2).ReadAsArray(2, 0, 1, 1)
+        assert val==12, "(dsf<<2).ReadAsArray(2, 0, 1, 1)==%s"%repr(val)
+        val=(2<<dsf).ReadAsArray(2, 0, 1, 1)
+        assert val==16, "(dsf<<2).ReadAsArray(2, 0, 1, 1)==%s"%repr(val)
+        #__rshift__ and __rrshift__
+        val=(dsf>>2).ReadAsArray(55,2,1,1)
+        assert val==64, "(dsf>>2).ReadAsArray(55,2,1,1)==%s"%repr(val)
+        val=(256>>dsf).ReadAsArray(1,0,1,1)
+        assert val==64, "(dsf>>2).ReadAsArray(1,0,1,1)==%s"%repr(val)
+        #__xor__ and __rxor__
+        val=(dsf^3).ReadAsArray(4,0,1,1)
+        assert val==6, "(dsf^3).ReadAsArray(4,0,1,1)==%s"%repr(val)
+        val=(3^dsf).ReadAsArray(4,0,1,1)
+        assert val==6, "(3^dsf).ReadAsArray(4,0,1,1)==%s"%repr(val)
+
+        #===========================================================================
+        #Boolean operations
+        #===========================================================================
+        #__lt__
+        val=(dsf<2).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(1,0), "(dsf<2).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        val=(1<dsf).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(0,1), "(1<dsf).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        #__le__
+        val=(dsf<=1).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(1,0), "(dsf<=1).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        val=(2<=dsf).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(0,1), "(2<=dsf).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        #__eq__
+        val=(dsf==1).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(1,0), "(dsf==1).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        val=(1==dsf).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(1,0), "(1==dsf).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        #__ne__
+        val=(dsf!=1).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(0,1), "(dsf==1).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        val=(1!=dsf).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(0,1), "(1==dsf).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        #__gt__
+        val=(dsf>1).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(0,1), "(dsf>1).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        val=(2>dsf).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(1,0), "(2>dsf).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        #__ge__
+        val=(dsf>=2).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(0,1), "(dsf>=2).ReadAsArray(0,0,2,1)==%s"%repr(val)
+        val=(1>=dsf).ReadAsArray(0,0,2,1)
+        assert (val[0][0],val[0][1])==(1,0), "(1>=dsf).ReadAsArray(0,0,2,1)==%s"%repr(val)
+
+        dsf=None
         return 'success'
     except ImportError:
         return 'skip'
     except:
         return fail()
-    finally:cleanup()
+    finally:
+        cleanup()
+        cleanup('__future__')
 
 def test_gdal_calculations_py_7():
     '''Test on-the-fly reprojection'''
@@ -482,34 +595,6 @@ def test_gdal_calculations_py_10():
     finally:cleanup()
 
 def test_gdal_calculations_py_11():
-    ''' Test snap dataset '''
-    try:
-        from gdal_calculations import Dataset, Env
-
-        f='data/tgc_geo.tif'
-        ds1=Dataset(f)
-        f='data/tgc_geo_shifted.vrt'
-        ds2=Dataset(f)
-        f='data/tgc_geo_shifted_2.vrt'
-        snap_ds=Dataset(f)
-
-        Env.snap=ds2
-        out=ds1+ds2
-        assert approx_equal([out._gt[0],out._gt[3]],[ds2._gt[0],ds2._gt[3]]),'out geotransform doesnae match ds2'
-
-        Env.snap=snap_ds
-        out=ds2+ds1
-        assert approx_equal([out._gt[0],out._gt[3]],[snap_ds._gt[0],snap_ds._gt[3]]),'out geotransform doesnae match snap_ds'
-
-        ds1,ds2,snap_ds,out=None,None,None,None
-        return 'success'
-    except ImportError:
-        return 'skip'
-    except:
-        return fail()
-    finally:cleanup()
-
-def test_gdal_calculations_py_12():
     ''' Test srs '''
     try:
         from gdal_calculations import Dataset, Env
@@ -533,7 +618,7 @@ def test_gdal_calculations_py_12():
         return fail()
     finally:cleanup()
 
-def test_gdal_calculations_py_13():
+def test_gdal_calculations_py_12():
     ''' Test nodata handling '''
     try:
         from gdal_calculations import Dataset, Env
@@ -571,7 +656,7 @@ def test_gdal_calculations_py_13():
         return fail()
     finally:cleanup()
 
-def test_gdal_calculations_py_14():
+def test_gdal_calculations_py_13():
     ''' Test numexpr '''
     try:
         from gdal_calculations import Dataset, Env
@@ -617,7 +702,7 @@ def test_gdal_calculations_py_14():
         cleanup()
         cleanup('numexpr')
 
-def test_gdal_calculations_py_15():
+def test_gdal_calculations_py_14():
     ''' Test numpy methods '''
     try:
         from gdal_calculations import Dataset, Env
@@ -640,7 +725,7 @@ def test_gdal_calculations_py_15():
     finally:
         cleanup()
 
-def test_gdal_calculations_py_16():
+def test_gdal_calculations_py_15():
     ''' Test commandline '''
     #In the unlikely event this code ever ends up _in_ GDAL, this function
     #will need modification to comply with standard GDAL script/sample paths
@@ -754,7 +839,6 @@ gdaltest_list = [
                  test_gdal_calculations_py_13,
                  test_gdal_calculations_py_14,
                  test_gdal_calculations_py_15,
-                 test_gdal_calculations_py_16,
                 ]
 
 if __name__ == '__main__':

@@ -315,7 +315,7 @@ class RasterLike(object):
                 data=getattr(data,attr)(*args,**kwargs)
 
                 if data.dtype==np.bool:data=data.astype(np.uint8)
-                if data.shape==(self._y_size,self._x_size):
+                if data.shape in [(self._y_size,self._x_size),(self._nbands,self._y_size,self._x_size)] :
                     datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
                     if datatype is None:
                         #datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.dtype.type)
@@ -323,7 +323,9 @@ class RasterLike(object):
                         #until http://trac.osgeo.org/gdal/ticket/5223 is implemented.
                         datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.view(str(data.dtype)).dtype.type)
                     if datatype is None:raise RuntimeError('Unsupported datatype (%s) returned by %s'%(str(data.dtype), str(attr)))
-                    tmpds=TemporaryDataset(self._x_size,self._y_size,self._nbands,
+                    if data.ndim==2:nbands=1
+                    else:nbands=data.shape[0]
+                    tmpds=TemporaryDataset(self._x_size,self._y_size,nbands,
                                            datatype,self._srs,self._gt, nodata)
 
                     tmpds.write_data(data, 0, 0)
@@ -336,91 +338,112 @@ class RasterLike(object):
 
         return __method__
 
-    def __operation__(self,op,other=None,*args,**kwargs):
-        ''' Perform basic calculations and return a temporary dataset'''
-
-        if other and isinstance(other,RasterLike):
-            dataset1,dataset2=self.check_extent(other)
-        else:
-            dataset1=self
-
-        if Env.tiled:
-            tmpds=None
-            for b1 in dataset1.ReadBlocksAsArray():
-                if Env.nodata:
-                    if b1.data.ndim==2:mask=(b1.data==dataset1._nodata[0])
-                    else:mask=np.array([b1.data[i,:,:]==dataset1._nodata[i] for i in range(b1.data.shape[0])])
-                    b1.data=np.ma.MaskedArray(b1.data,mask)
-                    b1.data.fill_value=dataset1._nodata[0]
-                    nodata=[dataset1._nodata[0]]*dataset1._nbands
-                else:nodata=dataset1._nodata
-
-                if other is not None: #zero is valid
-                    if isinstance(other,RasterLike):
-                        b2=Block(dataset2,b1.x_off, b1.y_off,b1.x_size, b1.y_size)
-
-                        if Env.nodata:
-                            if b2.data.ndim==2:mask=(b2.data==dataset2._nodata[0])
-                            else:mask=np.array([b2.data[i,:,:]==dataset2._nodata[i] for i in range(b2.data.shape[0])])
-                            b2.data=np.ma.MaskedArray(b2.data,mask)
-                            b2.data.fill_value=dataset1._nodata[0]
-                            nodata=[dataset1._nodata[0]]*dataset2._nbands
-                        else:nodata=dataset1._nodata
-
-                        data=op(b1.data, b2.data)
-                    else: #Not a Band/Dataset, try the op directly
-                        data=op(b1.data, other)
-                else:
-                    data=op(b1.data)
-                if data.dtype==np.bool:data=data.astype(np.uint8)
-                if not tmpds:
-                    datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-                    if not datatype:datatype=gdal.GDT_Byte
-                    tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
-                                           datatype,dataset1._srs,dataset1._gt,nodata)
-                tmpds.write_data(data, b1.x_off, b1.y_off)
-        else:
-            a1 = dataset1.ReadAsArray()
-            if Env.nodata:
-                if a1.ndim==2:mask=(a1==dataset1._nodata[0])
-                else:mask=np.array([a1[i,:,:]==dataset1._nodata[i] for i in range(a1.shape[0])])
-                a1=np.ma.MaskedArray(a1,mask)
-                a1.fill_value=dataset1._nodata[0]
-                nodata=[dataset1._nodata[0]]*dataset1._nbands
-            else:nodata=dataset1._nodata
-
-            if other is not None:
-                if isinstance(other,RasterLike):
-                    a2 = dataset2.ReadAsArray()
-
-                    if Env.nodata:
-                        if a2.ndim==2:mask=(a2==dataset2._nodata[0])
-                        else:mask=np.array([a2[i,:,:]==dataset2._nodata[i] for i in range(a2.shape[0])])
-                        a2=np.ma.MaskedArray(a2,mask)
-                        a2.fill_value=dataset1._nodata[0]
-                        nodata=[dataset1._nodata[0]]*dataset2._nbands
-                    else:nodata=dataset1._nodata
-
-                    data=op(a1, a2)
-                else: #Not a Band/Dataset, try the op directly
-                    data=op(a1, other)
+    def __operation__(self,op,other=None,swapped=False,*args,**kwargs):
+        ''' Perform arithmetic/bitwise/boolean and return a temporary dataset.
+            Set `swapped` to True to implement perform the operation
+            with reflected (swapped) operands.
+        '''
+        olderr=np.seterr(**{'divide': 'ignore', 'invalid': 'ignore'})
+        dataset1,dataset2=self,other
+        if isinstance(other,RasterLike):
+            if swapped:
+                dataset2,dataset1=other.check_extent(self)
             else:
-                data=op(a1)
+                dataset1,dataset2=self.check_extent(other)
 
-            if data.dtype==np.bool:data=data.astype(np.uint8)
-            datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-            if not datatype:datatype=gdal.GDT_Byte
-            tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
-                                   datatype,dataset1._srs,dataset1._gt,nodata)
-            tmpds.write_data(data, 0, 0)
-
+        if Env.tiled: tmpds=self.__tiled_op__(op,dataset1,dataset2,swapped,*args,**kwargs)
+        else: tmpds=self.__untiled_op__(op,dataset1,dataset2,swapped,*args,**kwargs)
         try:tmpds.FlushCache()
         except:pass
         Env.progress.update_progress()
+        np.seterr(**olderr)
+        return tmpds
+
+    def __tiled_op__(self,op,dataset1,dataset2,swapped=False,*args,**kwargs):
+        ''' Perform tiled arithmetic/bitwise/boolean operations'''
+        tmpds=None
+        for b1 in dataset1.ReadBlocksAsArray():
+            if Env.nodata:
+                if b1.data.ndim==2:mask=(b1.data==dataset1._nodata[0])
+                else:mask=np.array([b1.data[i,:,:]==dataset1._nodata[i] for i in range(b1.data.shape[0])])
+                b1.data=np.ma.MaskedArray(b1.data,mask)
+                b1.data.fill_value=dataset1._nodata[0]
+                nodata=[dataset1._nodata[0]]*dataset1._nbands
+            else:nodata=dataset1._nodata
+
+            if dataset2 is not None: #zero is valid
+                if isinstance(dataset2,RasterLike):
+                    b2=Block(dataset2,b1.x_off, b1.y_off,b1.x_size, b1.y_size)
+
+                    if Env.nodata:
+                        if b2.data.ndim==2:mask=(b2.data==dataset2._nodata[0])
+                        else:mask=np.array([b2.data[i,:,:]==dataset2._nodata[i] for i in range(b2.data.shape[0])])
+                        b2.data=np.ma.MaskedArray(b2.data,mask)
+                        b2.data.fill_value=dataset1._nodata[0]
+                        nodata=[dataset1._nodata[0]]*dataset2._nbands
+                    else:nodata=dataset1._nodata
+
+                    if swapped:data=op(b2.data, b1.data)
+                    else:data=op(b1.data, b2.data)
+                else: #Not a Band/Dataset, try the op directly
+                    if swapped:data=op(dataset2, b1.data)
+                    else:data=op(b1.data,dataset2)
+            else:
+                data=op(b1.data)
+            if data.dtype==np.bool:data=data.astype(np.uint8)
+            if not tmpds:
+                datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
+                if not datatype:datatype=gdal.GDT_Byte
+                try:tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
+                                       datatype,dataset1._srs,dataset1._gt,nodata)
+                except:tmpds=TemporaryDataset(dataset2._x_size,dataset2._y_size,dataset2._nbands,
+                                       datatype,dataset1._srs,dataset1._gt,nodata)
+            tmpds.write_data(data, b1.x_off, b1.y_off)
+
+        return tmpds
+
+    def __untiled_op__(self,op,dataset1,dataset2,swapped=False,*args,**kwargs):
+        ''' Perform untiled arithmetic/bitwise/boolean operations'''
+        a1 = dataset1.ReadAsArray()
+        if Env.nodata:
+            if a1.ndim==2:mask=(a1==dataset1._nodata[0])
+            else:mask=np.array([a1[i,:,:]==dataset1._nodata[i] for i in range(a1.shape[0])])
+            a1=np.ma.MaskedArray(a1,mask)
+            a1.fill_value=dataset1._nodata[0]
+            nodata=[dataset1._nodata[0]]*dataset1._nbands
+        else:nodata=dataset1._nodata
+
+        if dataset2 is not None:
+            if isinstance(dataset2,RasterLike):
+                a2 = dataset2.ReadAsArray()
+
+                if Env.nodata:
+                    if a2.ndim==2:mask=(a2==dataset2._nodata[0])
+                    else:mask=np.array([a2[i,:,:]==dataset2._nodata[i] for i in range(a2.shape[0])])
+                    a2=np.ma.MaskedArray(a2,mask)
+                    a2.fill_value=dataset1._nodata[0]
+                    nodata=[dataset1._nodata[0]]*dataset2._nbands
+                else:nodata=dataset1._nodata
+
+                if swapped:data=op(a2, a1)
+                else:data=op(a1,a2)
+            else: #Not a Band/Dataset, try the op directly
+                if swapped:data=op(dataset2, a1)
+                else:data=op(a1,dataset2)
+        else:
+            data=op(a1)
+
+        if data.dtype==np.bool:data=data.astype(np.uint8)
+        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
+        if not datatype:datatype=gdal.GDT_Byte
+        tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
+                               datatype,dataset1._srs,dataset1._gt,nodata)
+        tmpds.write_data(data, 0, 0)
+
         return tmpds
 
     #===========================================================================
-    #Basic arithmetic operations
+    #Arithmetic operations
     #===========================================================================
     def __add__(self,other):
         return self.__operation__(operator.__add__,other)
@@ -438,34 +461,53 @@ class RasterLike(object):
         return self.__operation__(operator.__mod__,other)
     def __pow__(self,other):
         return self.__operation__(operator.__pow__,other)
+    def __pos__(self):
+        return self.__operation__(operator.__pos__,other)
+    def __neg__(self):
+        return self.__operation__(operator.__neg__)
+    #For when the dataset is the right operand
+    def __radd__(self,other):
+        return self.__operation__(operator.__add__,other, swapped=1) #not that it really matters for + and *...
+    def __rsub__(self,other):
+        return self.__operation__(operator.__sub__,other, swapped=1)
+    def __rmul__(self,other):
+        return self.__operation__(operator.__mul__,other, swapped=1)
+    def __rdiv__(self,other):
+        return self.__operation__(operator.__div__,other, swapped=1)
+    def __rtruediv__(self,other):
+        return self.__operation__(operator.__truediv__,other, swapped=1)
+    def __rfloordiv__(self,other):
+        return self.__operation__(operator.__floordiv__,other, swapped=1)
+    def __rmod__(self,other):
+        return self.__operation__(operator.__mod__,other, swapped=1)
+    def __rpow__(self,other):
+        return self.__operation__(operator.__pow__,other, swapped=1)
+    #===========================================================================
+    #Bitwise operations
+    #===========================================================================
+    def __and__(self,other):
+        return self.__operation__(operator.__and__,other)
+    def __inv__(self):
+        return self.__operation__(operator.__inv__)
     def __lshift__(self,other):
         return self.__operation__(operator.__lshift__,other)
     def __rshift__(self,other):
         return self.__operation__(operator.__rshift__,other)
+    def __or__(self,other):
+        return self.__operation__(operator.__or__,other)
     def __xor__(self,other):
         return self.__operation__(operator.__xor__,other)
-    def __radd__(self,other):
-        return self.__operation__(operator.__add__,other)
-    def __rsub__(self,other):
-        return self.__operation__(operator.__sub__,other)
-    def __rmul__(self,other):
-        return self.__operation__(operator.__mul__,other)
-    def __rdiv__(self,other):
-        return self.__operation__(operator.__div__,other)
-    def __rtruediv__(self,other):
-        return self.__operation__(operator.__truediv__,other)
-    def __rfloordiv__(self,other):
-        return self.__operation__(operator.__floordiv__,other)
-    def __rmod__(self,other):
-        return self.__operation__(operator.__mod__,other)
-    def __rpow__(self,other):
-        return self.__operation__(operator.__pow__,other)
+    #For when the dataset is the right operand
+    def __rand__(self,other):
+        return self.__operation__(operator.__and__,other, swapped=1)
     def __rlshift__(self,other):
-        return self.__operation__(operator.__lshift__,other)
+        return self.__operation__(operator.__lshift__,other, swapped=1)
     def __rrshift__(self,other):
-        return self.__operation__(operator.__rshift__,other)
+        return self.__operation__(operator.__rshift__,other, swapped=1)
+    def __ror__(self,other):
+        return self.__operation__(operator.__or__,other, swapped=1)
     def __rxor__(self,other):
-        return self.__operation__(operator.__xor__,other)
+        return self.__operation__(operator.__xor__,other, swapped=1)
 
     #===========================================================================
     #Boolean operations
