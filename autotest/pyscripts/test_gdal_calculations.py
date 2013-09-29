@@ -294,6 +294,7 @@ def test_gdal_calculations_py_6():
     ''' Test some arithmetic '''
     try:
         from gdal_calculations import Dataset,Int16
+        olderr=np.seterr(**{'all': 'ignore'})
 
         #Regular raster
         f='data/tgc_geo.tif'
@@ -423,6 +424,8 @@ def test_gdal_calculations_py_6():
     except:
         return fail()
     finally:
+        try:np.seterr(**olderr)
+        except:pass
         cleanup()
         cleanup('__future__')
 

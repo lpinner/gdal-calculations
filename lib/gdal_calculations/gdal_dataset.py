@@ -269,67 +269,41 @@ class RasterLike(object):
 
         def __method__(*args,**kwargs):
             if attr[:8] == '__array_': return None #This breaks numexpr
-            if Env.tiled:
-                tmpds=None
-                for b in self.ReadBlocksAsArray():
+            
+            if Env.tiled: reader=self.ReadBlocksAsArray()
+            else: reader=[Block(self,0, 0,self.RasterXSize, self.RasterYSize)]
 
-                    if Env.nodata:
-                        if b.data.ndim==2:mask=(b.data==self._nodata[0])
-                        else:mask=np.array([b.data[i,:,:]==self._nodata[i] for i in range(b.data.shape[0])])
-                        b.data=np.ma.MaskedArray(b.data,mask)
-                        b.data.fill_value=self._nodata[0]
-                        nodata=[self._nodata[0]]*self._nbands
-                    else:nodata=self._nodata
+            tmpds=None
+            for b in reader:
 
-                    data=getattr(b.data,attr)(*args,**kwargs)
-
-                    #Sanity check - returns array of same dimensions as block
-                    if data.shape!=(b.y_size,b.x_size):
-                        raise RuntimeError('When Env.tiled==True, the "%s" method is not supported.'%attr)
-
-                    if not tmpds:
-                        #GDAL casts unknown types to Float64... bools don't need to be that big
-                        if data.dtype==np.bool:data=data.astype(np.uint8)
-                        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-
-                        if datatype is None:raise RuntimeError('Unsupported operation: "%s"'%attr)
-                        if data.ndim==2:nbands=1
-                        else:nbands=data.shape[0]
-
-                        tmpds=TemporaryDataset(self._x_size,self._y_size,nbands,
-                                               datatype,self._srs,self._gt, nodata)
-
-                    tmpds.write_data(data, b.x_off, b.y_off)
-
-            else:
-                data = self.ReadAsArray()
-                shape=data.shape
                 if Env.nodata:
-                    if data.ndim==2:mask=(data==self._nodata[0])
-                    else:mask=np.array([data[i,:,:]==self._nodata[i] for i in range(data.shape[0])])
-                    data=np.ma.MaskedArray(data,mask)
-                    data.fill_value=self._nodata[0]
+                    if b.data.ndim==2:mask=(b.data==self._nodata[0])
+                    else:mask=np.array([b.data[i,:,:]==self._nodata[i] for i in range(b.data.shape[0])])
+                    b.data=np.ma.MaskedArray(b.data,mask)
+                    b.data.fill_value=self._nodata[0]
                     nodata=[self._nodata[0]]*self._nbands
                 else:nodata=self._nodata
 
-                data=getattr(data,attr)(*args,**kwargs)
+                data=getattr(b.data,attr)(*args,**kwargs)
 
-                if data.dtype==np.bool:data=data.astype(np.uint8)
-                if data.shape in [(self._y_size,self._x_size),(self._nbands,self._y_size,self._x_size)] :
+                #Sanity check - returns array of same dimensions as block
+                if data.shape not in [((b.y_size,b.x_size)),(self._nbands,b.y_size,b.x_size)]:
+                    if Env.tiled:raise RuntimeError('When Env.tiled==True, the "%s" method is not supported.'%attr)
+                    else:return data
+
+                if not tmpds:
+                    #GDAL casts unknown types to Float64... bools don't need to be that big
+                    if data.dtype==np.bool:data=data.astype(np.uint8)
                     datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-                    if datatype is None:
-                        #datatype=gdal_array.NumericTypeCodeToGDALTypeCode(array.dtype.type)
-                        #Work around numexpr issue #112 - http://code.google.com/p/numexpr/issues/detail?id=112
-                        #until http://trac.osgeo.org/gdal/ticket/5223 is implemented.
-                        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.view(str(data.dtype)).dtype.type)
-                    if datatype is None:raise RuntimeError('Unsupported datatype (%s) returned by %s'%(str(data.dtype), str(attr)))
+
+                    if datatype is None:raise RuntimeError('Unsupported operation: "%s"'%attr)
                     if data.ndim==2:nbands=1
                     else:nbands=data.shape[0]
+
                     tmpds=TemporaryDataset(self._x_size,self._y_size,nbands,
                                            datatype,self._srs,self._gt, nodata)
 
-                    tmpds.write_data(data, 0, 0)
-                else:return data
+                tmpds.write_data(data, b.x_off, b.y_off)
 
             try:tmpds.FlushCache() #Fails when file is in /vsimem
             except:pass
@@ -340,10 +314,9 @@ class RasterLike(object):
 
     def __operation__(self,op,other=None,swapped=False,*args,**kwargs):
         ''' Perform arithmetic/bitwise/boolean and return a temporary dataset.
-            Set `swapped` to True to implement perform the operation
+            Set `swapped` to True to perform the operation
             with reflected (swapped) operands.
         '''
-        olderr=np.seterr(**{'divide': 'ignore', 'invalid': 'ignore'})
         dataset1,dataset2=self,other
         if isinstance(other,RasterLike):
             if swapped:
@@ -351,18 +324,10 @@ class RasterLike(object):
             else:
                 dataset1,dataset2=self.check_extent(other)
 
-        if Env.tiled: tmpds=self.__tiled_op__(op,dataset1,dataset2,swapped,*args,**kwargs)
-        else: tmpds=self.__untiled_op__(op,dataset1,dataset2,swapped,*args,**kwargs)
-        try:tmpds.FlushCache()
-        except:pass
-        Env.progress.update_progress()
-        np.seterr(**olderr)
-        return tmpds
-
-    def __tiled_op__(self,op,dataset1,dataset2,swapped=False,*args,**kwargs):
-        ''' Perform tiled arithmetic/bitwise/boolean operations'''
+        if Env.tiled: reader=dataset1.ReadBlocksAsArray()
+        else: reader=[Block(dataset1,0, 0,dataset1.RasterXSize, dataset1.RasterYSize)]
         tmpds=None
-        for b1 in dataset1.ReadBlocksAsArray():
+        for b1 in reader:
             if Env.nodata:
                 if b1.data.ndim==2:mask=(b1.data==dataset1._nodata[0])
                 else:mask=np.array([b1.data[i,:,:]==dataset1._nodata[i] for i in range(b1.data.shape[0])])
@@ -400,46 +365,9 @@ class RasterLike(object):
                                        datatype,dataset1._srs,dataset1._gt,nodata)
             tmpds.write_data(data, b1.x_off, b1.y_off)
 
-        return tmpds
-
-    def __untiled_op__(self,op,dataset1,dataset2,swapped=False,*args,**kwargs):
-        ''' Perform untiled arithmetic/bitwise/boolean operations'''
-        a1 = dataset1.ReadAsArray()
-        if Env.nodata:
-            if a1.ndim==2:mask=(a1==dataset1._nodata[0])
-            else:mask=np.array([a1[i,:,:]==dataset1._nodata[i] for i in range(a1.shape[0])])
-            a1=np.ma.MaskedArray(a1,mask)
-            a1.fill_value=dataset1._nodata[0]
-            nodata=[dataset1._nodata[0]]*dataset1._nbands
-        else:nodata=dataset1._nodata
-
-        if dataset2 is not None:
-            if isinstance(dataset2,RasterLike):
-                a2 = dataset2.ReadAsArray()
-
-                if Env.nodata:
-                    if a2.ndim==2:mask=(a2==dataset2._nodata[0])
-                    else:mask=np.array([a2[i,:,:]==dataset2._nodata[i] for i in range(a2.shape[0])])
-                    a2=np.ma.MaskedArray(a2,mask)
-                    a2.fill_value=dataset1._nodata[0]
-                    nodata=[dataset1._nodata[0]]*dataset2._nbands
-                else:nodata=dataset1._nodata
-
-                if swapped:data=op(a2, a1)
-                else:data=op(a1,a2)
-            else: #Not a Band/Dataset, try the op directly
-                if swapped:data=op(dataset2, a1)
-                else:data=op(a1,dataset2)
-        else:
-            data=op(a1)
-
-        if data.dtype==np.bool:data=data.astype(np.uint8)
-        datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
-        if not datatype:datatype=gdal.GDT_Byte
-        tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
-                               datatype,dataset1._srs,dataset1._gt,nodata)
-        tmpds.write_data(data, 0, 0)
-
+        try:tmpds.FlushCache()
+        except:pass
+        Env.progress.update_progress()
         return tmpds
 
     #===========================================================================
