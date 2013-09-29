@@ -26,6 +26,8 @@ RECOMMENDED=['numexpr']
 script=os.path.join('bin', 'gdal_calculate')
 scripts=[script,script+'.cmd']
 
+setupkwargs={}
+
 if 'sdist' not in sys.argv:
     if os.name=='nt':del scripts[0]
     else:del scripts[1]
@@ -37,6 +39,12 @@ if 'install' in sys.argv:
     for module in RECOMMENDED:
         try:__import__(module)
         except ImportError:warnings.warn('%s is recommended.')
+else:
+    setupkwargs['data_files']=[
+                ('',['README']),
+                ('',['COPYING']),
+                ('',['NEWS'])
+               ]
 
 if 'bdist' in sys.argv:
     from distutils.command.bdist_wininst import bdist_wininst as _bdist_wininst
@@ -62,26 +70,20 @@ if 'bdist' in sys.argv:
                 return f.read()
             finally:
                 f.close()
-    setupkwargs={'cmdclass':{'bdist_wininst':bdist_wininst}}
-else:
-    setupkwargs={}
+    setupkwargs['cmdclass']={'bdist_wininst':bdist_wininst}
 
 setup(
     name = 'gdal-calculations',
     version = __version__,
-	license = 'MIT',
-	description=SHORTDESC,
-	long_description=LONGDESC,
-	author=AUTHOR,
-	author_email=AUTHOR_EMAIL,
-	classifiers = CLASSIFIERS,
-	url=URL,
+    license = 'MIT',
+    description=SHORTDESC,
+    long_description=LONGDESC,
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    classifiers = CLASSIFIERS,
+    url=URL,
     scripts=scripts,
     package_dir={'': 'lib'},
     packages=['gdal_calculations'],
-    data_files=[('',['README']),
-                ('',['COPYING']),
-                ('',['NEWS'])
-               ],
     **setupkwargs
     )
