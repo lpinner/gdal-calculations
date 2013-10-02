@@ -18,22 +18,44 @@ Notes:
          the limitations specified in the examples below.
 
 Classes/Objects:
-    Dataset(filepath_or_dataset,*args)
+    Dataset(filepath_or_dataset ,*args)
         - Base Dataset class.
         - Instantiate by passing a path or gdal.Dataset object.
         - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
         - Supports arithmetic operations (i.e ds1 + ds2)
-    Band- Band object returned from Dataset[i] (zero based) or Dataset.GetRasterBand(j) (1 based)
+    Band
+        - Returned from Dataset[i] (zero based) or Dataset.GetRasterBand(j) (1 based)
+          methods, not instantiated directly.
         - Supports gdal.RasterBand and numpy.ndarray method and attribute calls.
         - Supports arithmetic operations (i.e ds1[0] + ds2.GetRasterBand(1))
-    ArrayDataset(array,extent=[],srs='',gt=[],nodata=[], prototype_ds=None)
+    ClippedDataset(dataset_or_band, extent)
         - Subclass of Dataset.
+        - Uses VRT functionality to modify extent.
+    ConvertedDataset(dataset_or_band, datatype)
+        - Subclass of Dataset.
+        - Uses VRT functionality to modify datatype.
+        - Returned by the type conversion functions, not instantiated directly.
+    TemporaryDataset(cols,rows,bands,datatype,srs='',gt=[],nodata=[])
+        - Subclass of Dataset.
+        - A temporary raster that only persists until it goes out of scope.
+        - Stored in the Env.tempdir directory, which may be on disk or in
+          memory (/vsimem).
+        - Can be made permanent with the `save` method.
+    WarpedDataset(dataset_or_band, wkt_srs, snap_ds=None, snap_cellsize=None)
+        - Subclass of Dataset.
+        - Uses VRT functionality to warp Dataset.
+    ArrayDataset(array,extent=[],srs='',gt=[],nodata=[], prototype_ds=None)
+        - Subclass of TemporaryDataset.
         - Instantiate by passing a numpy ndarray and georeferencing information
           or a prototype Dataset.
-        - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
-        - Supports arithmetic operations (i.e ds1 + ds2)
+    DatasetStack(filepaths, band=0)
+        - Stack of bands from multiple datasets
+        - Similar to gdalbuildvrt -separate etc... functionality, except the class
+          can handle rasters with different extents,cellsizes and coordinate systems
+          as long as they overlap.
     Env - Object for setting various environment properties.
-          The following properties are supported:
+        - This is instantiated on import.
+        - The following properties are supported:
             cellsize
               - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
               - Default = "DEFAULT"
@@ -74,7 +96,7 @@ Classes/Objects:
               - Default = True
     Byte, UInt16, Int16, UInt32, Int32, Float32, Float64
         - Type conversions functions
-        - Returns a Dataset object
+        - Returns a ConvertedDataset object
 
 Examples:
 
@@ -118,6 +140,9 @@ Examples:
     #If you want to speed things up, use numexpr!
     #but there are a few limitations...
     import numexpr as ne
+
+    #Must enable numexpr
+    Env.enable_numexpr=True
 
     #Must not be tiled for numexpr
     Env.tiled=False
