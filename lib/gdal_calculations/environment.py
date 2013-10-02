@@ -35,46 +35,7 @@ from osgeo import gdal, osr
 # Processing environment
 class Env(object):
     ''' Class for setting various environment properties
-        Currently the following properties are supported:
-            cellsize
-              - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
-              - Default = "DEFAULT"
-            enable_numexpr
-              - this can break core numpy methods, such as numpy.sum([Dataset(foo),Dataset(bar)]
-              - Default = False
-            extent
-              - one of "MINOF", "INTERSECT", "MAXOF", "UNION", [xmin,ymin,xmax,ymax]
-              - Default = "MINOF"
-            nodata
-              - handle nodata using masked arrays - True/False
-              - Default = False
-            ntiles
-              - number of tiles to process at a time
-              - Default = 1
-            overwrite
-              - overwrite if required - True/False
-              - Default = False
-            reproject
-              - reproject if required - True/False
-              - datasets are projected to the SRS of the first input dataset in an expression
-                unless Env.srs is set.
-              - Default = False
-            resampling
-              - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)
-              - Default = "NEAREST"
-            snap
-              - a gdal_calculations.Dataset/Band object
-              - Default = None
-            srs
-              - the output spatial reference system
-              - one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
-              - Default = None
-            tempdir
-              - temporary working directory, can be set to "/vsimem" for in-memory working
-              - Default = tempfile.tempdir
-            tiled
-              - use tiled processing - True/False
-              - Default = True
+        Notes: - see __init__.py
     '''
 
     #Properties
