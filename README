@@ -1,24 +1,55 @@
-This package enables simple tiled (or untiled if desired) raster calculations (AKA "map algebra") from the commandline or from within your python scripts.
+<a id="top"></a>
+This package enables simple tiled (or untiled if desired) raster calculations 
+(AKA "map algebra") from the commandline or from within your python scripts.  
 
-There is a commandline raster calculator:
+* [Notes](#not)
+* [Installation](#ins)
+* [Requirements](#req)
+* [Commandline raster calculator](#cmd)
+* [Raster calculations library](#lib)
+
+<a id="not"></a>
+Notes [^](#top)
+-----
+Both the raster calculator and the calculations library can handle rasters with 
+different extents,cellsizes and coordinate systems as long as they overlap. 
+
+If extents/cellsizes/coordinate systems differ, the output extent/cellsize will 
+be the MINOF/MAXOF of input datasets, while the output coordinate system will be .
+that of the leftmost Dataset in the expression unless Env.extent/Env.cellsize/Env.srs 
+are specified.
+
+gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are
+passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
+
+If numexpr is installed, it can be used to evaluate your expressions as it is much 
+faster.  However, numexpr expressions are very limited: tiled processing, 
+on-the-fly reprojection, extent clipping/snapping, method/function calls and 
+subscripting are not supported.
+
+<a id="ins"></a>
+Installation [^](#top)
+------------
+
+Windows: Download and run the 32bit or 64bit installer as appropriate.
+All: Download and extract the gdal-calculations-{version}.tar.gz and run 
+`python setup.py install` with administrative or root privileges.
+
+<a id="req"></a>
+Requirements [^](#top)
+------------
+
+* [Python](http://www.python.org) 2.6+
+* [GDAL](http://www.gdal.org) with python bindings
+* [numpy](http://www.numpy.org)
+
+<a id="cmd"></a>
+Commandline raster calculator [^](#top)
+-----------------------------
 
     Name: gdal_calculate
     Purpose: Perform simple tiled raster calculations (AKA "map algebra")
              from the commandline
-
-    Notes:
-        - Can handle rasters with different extents,cellsizes and coordinate
-          systems as long as they overlap. If coordinate systems differ, the
-          output coordinate system will be that of the leftmost Dataset
-          in the expression.
-        - GDALDataset and RasterBand and numpy method and attribute calls are
-          passed down to the underlying GDALDataset, GDALRasterBand and ndarray
-          objects.
-        - If numexpr is installed, gdal_calculate will try to use numexpr.evaluate
-          to process the expression as it is much faster. However, numexpr
-          expressions are very limited: tiled processing, on-the-fly reprojection,
-          extent clipping/snapping, method/function calls and subscripting are
-          not supported.
 
     Required parameters:
          --calc     : calculation in numpy syntax, rasters specified as using
@@ -62,7 +93,10 @@ There is a commandline raster calculator:
                 --nir=../testdata/landsat_geo.tif    \
                 --overwrite --reproject --extent=MAXOF
                 
-And a raster calculations library:
+
+<a id="lib"></a>
+Raster calculations library [^](#top)
+---------------------------
 
     Name: gdal_calculations
     Purpose: GDAL Dataset and Band abstraction for simple tiled raster calculations
@@ -71,32 +105,45 @@ And a raster calculations library:
     Author: Luke Pinner
     Contributors: Matt Gregory
 
-    Notes:
-       - Can handle rasters with different extents,cellsizes and coordinate systems
-         as long as they overlap. If cellsizes/coordinate systems differ, the output
-         cellsize/coordinate system will be that of the leftmost Dataset in the expression.
-       - gdal.Dataset and gdal.RasterBand and numpy.ndarray method and attribute calls are
-         passed down to the underlying gdal.Dataset, gdal.RasterBand and ndarray objects.
-       - If numexpr is installed, it can be used to evaluate your expressions, but note
-         the limitations specified in the examples below.
-
     Classes/Objects:
-        Dataset(filepath_or_dataset,*args)
+        Dataset(filepath_or_dataset ,*args)
             - Base Dataset class.
             - Instantiate by passing a path or gdal.Dataset object.
             - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
             - Supports arithmetic operations (i.e ds1 + ds2)
-        Band- Band object returned from Dataset[i] (zero based) or Dataset.GetRasterBand(j) (1 based)
+        Band
+            - Returned from Dataset[i] (zero based) or Dataset.GetRasterBand(j) (1 based)
+              methods, not instantiated directly.
             - Supports gdal.RasterBand and numpy.ndarray method and attribute calls.
             - Supports arithmetic operations (i.e ds1[0] + ds2.GetRasterBand(1))
-        ArrayDataset(array,extent=[],srs='',gt=[],nodata=[], prototype_ds=None)
+        ClippedDataset(dataset_or_band, extent)
             - Subclass of Dataset.
+            - Uses VRT functionality to modify extent.
+        ConvertedDataset(dataset_or_band, datatype)
+            - Subclass of Dataset.
+            - Uses VRT functionality to modify datatype.
+            - Returned by the type conversion functions, not instantiated directly.
+        TemporaryDataset(cols,rows,bands,datatype,srs='',gt=[],nodata=[])
+            - Subclass of Dataset.
+            - A temporary raster that only persists until it goes out of scope.
+            - Stored in the Env.tempdir directory, which may be on disk or in
+              memory (/vsimem).
+            - Can be made permanent with the `save` method.
+        WarpedDataset(dataset_or_band, wkt_srs, snap_ds=None, snap_cellsize=None)
+            - Subclass of Dataset.
+            - Uses VRT functionality to warp Dataset.
+        ArrayDataset(array,extent=[],srs='',gt=[],nodata=[], prototype_ds=None)
+            - Subclass of TemporaryDataset.
             - Instantiate by passing a numpy ndarray and georeferencing information
               or a prototype Dataset.
-            - Supports gdal.Dataset and numpy.ndarray method and attribute calls.
-            - Supports arithmetic operations (i.e ds1 + ds2)
-        Env - Object for setting various environment properties. 
-              The following properties are supported:
+        DatasetStack(filepaths, band=0)
+            - Stack of bands from multiple datasets
+            - Similar to gdalbuildvrt -separate etc... functionality, except the class
+              can handle rasters with different extents,cellsizes and coordinate systems
+              as long as they overlap.
+        Env - Object for setting various environment properties.
+            - This is instantiated on import.
+            - The following properties are supported:
                 cellsize
                   - one of 'DEFAULT','MINOF','MAXOF', [xres,yres], xyres
                   - Default = "DEFAULT"
@@ -137,7 +184,7 @@ And a raster calculations library:
                   - Default = True
         Byte, UInt16, Int16, UInt32, Int32, Float32, Float64
             - Type conversions functions
-            - Returns a Dataset object
+            - Returns a ConvertedDataset object
 
     Examples:
         from gdal_calculations import *
