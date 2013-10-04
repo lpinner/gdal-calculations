@@ -204,6 +204,7 @@ class RasterLike(object):
 
     def __getnodes__(self, root, nodetype, name, index=True):
         '''Function for handling serialised VRT XML'''
+        #Originally based on the  _xmlsearch function in GDAL autotest/gdrivers/vrtderived.py
         nodes=[]
         for i,node in enumerate(root[2:]):
             if node[0] == nodetype and node[1] == name:
@@ -269,7 +270,7 @@ class RasterLike(object):
 
         def __method__(*args,**kwargs):
             if attr[:8] == '__array_': return None #This breaks numexpr
-            
+
             if Env.tiled: reader=self.ReadBlocksAsArray()
             else: reader=[Block(self,0, 0,self.RasterXSize, self.RasterYSize)]
 
