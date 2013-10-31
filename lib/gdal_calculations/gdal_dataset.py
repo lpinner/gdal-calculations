@@ -89,6 +89,7 @@ class RasterLike(object):
             del ds
             return Dataset(outpath)
         else:raise RuntimeError('Output %s exists and overwrite is not set.'%outpath)
+    save=create_copy #synonym for backwards compatibility
 
     def read_blocks_as_array(self, nblocks=None):
         '''Read GDAL Datasets/Bands block by block'''
