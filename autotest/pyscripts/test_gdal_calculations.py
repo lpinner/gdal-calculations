@@ -798,6 +798,51 @@ def test_gdal_calculations_py_15():
         os.chdir(cd)
         cleanup()
 
+def test_gdal_calculations_py_16():
+    ''' Test Issue 3 - Multiband order'''
+    try:
+        from gdal_calculations import Dataset, Int16, Env
+
+        #Regular raster
+        f='data/tgc_multiband.tif'
+        dsf=Dataset(f)
+
+        val=dsf[0].ReadAsArray(0, 0, 1, 1)
+        assert val==1, "dsf[0].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dsf[1].ReadAsArray(0, 0, 1, 1)
+        assert val==2, "dsf[1].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dsf[2].ReadAsArray(0, 0, 1, 1)
+        assert val==3, "dsf[2].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dsf[3].ReadAsArray(0, 0, 1, 1)
+        assert val==4, "dsf[3].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        dst=Int16(dsf)
+        val=dst[0].ReadAsArray(0, 0, 1, 1)
+        assert val==1, "dst[0].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dst[1].ReadAsArray(0, 0, 1, 1)
+        assert val==2, "dst[1].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dst[2].ReadAsArray(0, 0, 1, 1)
+        assert val==3, "dst[2].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dst[3].ReadAsArray(0, 0, 1, 1)
+        assert val==4, "dst[3].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        Env.extent=[0.0, 0.0, 5.0, 5.0]
+        dst=dsf*1
+        val=dst[0].ReadAsArray(0, 0, 1, 1)
+        assert val==1, "dst[0].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dst[1].ReadAsArray(0, 0, 1, 1)
+        assert val==2, "dst[1].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dst[2].ReadAsArray(0, 0, 1, 1)
+        assert val==3, "dst[2].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+        val=dst[3].ReadAsArray(0, 0, 1, 1)
+        assert val==4, "dst[3].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
+
+        return 'success'
+    except:
+        return fail()
+    finally:
+        cleanup()
+
 #-----------------------------------------------------------
 def fail(reason=''):
     exc_type, exc_value, exc_tb=sys.exc_info()
@@ -842,6 +887,7 @@ gdaltest_list = [
                  test_gdal_calculations_py_13,
                  test_gdal_calculations_py_14,
                  test_gdal_calculations_py_15,
+                 test_gdal_calculations_py_16,
                 ]
 
 if __name__ == '__main__':

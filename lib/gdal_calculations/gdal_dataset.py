@@ -781,7 +781,7 @@ class ConvertedDataset(Dataset):
             except TypeError:vrtbandnodes[band][node][2][1]=datatype
             node=getnodes(vrtbandnodes[band], gdal.CXT_Attribute, 'band')[0]
             vrtbandnodes[band][node][2][1]=str(i+1)
-            vrttree.insert(key,vrtbandnodes[band])
+            vrttree.insert(vrtbandkeys[i],vrtbandnodes[band])
 
         #Handle warped VRTs
         wo=getnodes(vrttree, gdal.CXT_Element, 'GDALWarpOptions')
