@@ -1,3 +1,10 @@
+GDAL Calculations 0.8 2013-11-02 (AEST)
+=======================================
+Fixes
+-----
+* Fix Issue 2 gdal_calculate fails with ConvertedDataset 	 
+* Fix Issue 3 Output bands out of order when calculations run on multiband raster 
+
 GDAL Calculations 0.7 2013-09-27 (AEST)
 =======================================
 Fixes

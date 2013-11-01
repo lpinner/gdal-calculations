@@ -1,4 +1,4 @@
-__version__='0.8dev'
+__version__='0.8'
 
 import os,sys,warnings
 from distutils.core import setup

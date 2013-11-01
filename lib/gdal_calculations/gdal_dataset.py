@@ -397,7 +397,7 @@ class RasterLike(object):
         return self.__operation__(operator.__neg__)
     #For when the dataset is the right operand
     def __radd__(self,other):
-        return self.__operation__(operator.__add__,other, swapped=1) #not that it really matters for + and *...
+        return self.__operation__(operator.__add__,other, swapped=1)  #not that it really matters for + and *...
     def __rsub__(self,other):
         return self.__operation__(operator.__sub__,other, swapped=1)
     def __rmul__(self,other):
