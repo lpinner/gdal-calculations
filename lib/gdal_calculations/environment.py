@@ -101,13 +101,16 @@ class Env(object):
 
     @resampling.setter
     def resampling(self, value):
-        lut={'AVERAGE': gdal.GRA_Average,
-              'BILINEAR':gdal.GRA_Bilinear,
+        lut={ 'BILINEAR':gdal.GRA_Bilinear,
               'CUBIC':gdal.GRA_Cubic,
               'CUBICSPLINE':gdal.GRA_CubicSpline,
               'LANCZOS':gdal.GRA_Lanczos,
-              'MODE':gdal.GRA_Mode,
               'NEAREST':gdal.GRA_NearestNeighbour}
+
+        if int(gdal.VersionInfo("VERSION_NUM"))>=1100000:
+            lut['AVERAGE']=gdal.GRA_Average
+            lut['MODE']=gdal.GRA_Mode
+            
         try:
             value=value.upper()
             self._resampling=lut[value]

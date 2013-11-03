@@ -56,6 +56,7 @@ def test_gdal_calculations_py_2():
     ''' Test environment getting/setting '''
     try:
         from gdal_calculations import Env,Dataset
+        from osgeo import gdal
 
         #Get/set cellsize
         assert Env.cellsize=="DEFAULT", "Env.cellsize != 'DEFAULT' ('%s')"%Env.cellsize
@@ -94,13 +95,14 @@ def test_gdal_calculations_py_2():
 
         #Get/set resampling
         assert Env.resampling==gdal.GRA_NearestNeighbour, 'Env.resampling != "NEAREST"'
-        Env.resampling="AVERAGE"
         Env.resampling="BILINEAR"
         Env.resampling="CUBIC"
         Env.resampling="CUBICSPLINE"
         Env.resampling="LANCZOS"
-        Env.resampling="MODE"
         Env.resampling="NEAREST"
+        if int(gdal.VersionInfo("VERSION_NUM"))>=1100000:
+            Env.resampling="AVERAGE"
+            Env.resampling="MODE"
         try:Env.resampling="INCORRECT"
         except:pass
         else:return fail('Env.resampling accepted an incorrect value')
