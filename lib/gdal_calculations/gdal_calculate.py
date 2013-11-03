@@ -185,13 +185,18 @@ def main():
     datasets=[]
     while rasters:
         arg=rasters.pop(0)
-        try:var,path=arg.split('=') # --arg=filepath
+        try:var,path=arg.split('=') # --arg=filepath?
         except:
-            var=arg
-            path=rasters.pop(0)
-        var=var.lstrip('-')
-        locals()[var]=Dataset(path)
-        datasets.append(locals()[var])
+            try:                    # -a filepath?
+                var=arg
+                path=rasters.pop(0)
+            except:
+                var=None
+                path=None
+        if var and path:
+            var=var.lstrip('-')
+            locals()[var]=Dataset(path)
+            datasets.append(locals()[var])
 
     #Setup progress meter
     if not args.quiet:
@@ -211,8 +216,13 @@ def main():
             #and no extent/cellsize/srs differences are handled
             import numexpr
             outfile=ArrayDataset(numexpr.evaluate(args.calc), prototype_ds=datasets[0])
+            outfile.save(args.outfile,args.outformat,args.creation_options)
         else:raise Exception
     except:
-        outfile = eval(args.calc)
+        try:
+            outfile = eval(args.calc)
+            outfile.save(args.outfile,args.outformat,args.creation_options)
+        except Exception as e:
+            sys.stderr.write('\n%s: %s\n'%(type(e).__name__,e.message))
+            sys.exit(1)
 
-    outfile.save(args.outfile,args.outformat,args.creation_options)
