@@ -1,3 +1,9 @@
+GDAL Calculations 0.9 2014-03-12 (AEST)
+=======================================
+Fixes
+-----
+* Fix error with unsupported gdal.GRA_Average resampling in gdal<1.10 
+
 GDAL Calculations 0.8 2013-11-02 (AEST)
 =======================================
 Fixes
