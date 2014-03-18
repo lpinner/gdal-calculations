@@ -83,8 +83,12 @@ class RasterLike(object):
     def create_copy(self,outpath,outformat='GTIFF',options=[]):
         ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
         if ok:
+            try:                   #Is it a Band
+                ds=self.dataset._dataset
+            except AttributeError: #No, it's a Dataset
+                ds=self._dataset
             driver=gdal.GetDriverByName(outformat)
-            ds=driver.CreateCopy(outpath,self._dataset,options=options)
+            ds=driver.CreateCopy(outpath,ds,options=options)
             ds=None
             del ds
             return Dataset(outpath)
