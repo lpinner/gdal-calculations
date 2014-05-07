@@ -1,5 +1,13 @@
 __version__='0.9'
 
+#To build Win exes on linux...
+#mkdir /tmp/wininst
+#cd /tmp/wininst
+#apt-get source python2.7-dev
+#sudo cp python2.7*/Lib/distutils/command/*.exe /usr/lib/python2.7/distutils/command/
+#cd 
+#rm -rf /tmp/wininst
+
 import os,sys,warnings
 from distutils.core import setup
 sys.path.insert(0,'lib')
@@ -12,7 +20,7 @@ LONGDESC='''This package enables simple tiled (or untiled if desired) raster cal
 There is a commandline raster calculator and a raster calculations library.'''
 
 AUTHOR="Luke Pinner"
-AUTHOR_EMAIL="gdal.calculations@maildrop.cc"
+AUTHOR_EMAIL="gdal.calculations@mailinator.com"
 URL="https://code.google.com/p/gdal-calculations"
 
 CLASSIFIERS = [ 'Operating System :: OS Independent',
