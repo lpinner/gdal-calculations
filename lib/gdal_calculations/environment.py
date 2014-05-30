@@ -46,6 +46,7 @@ class Env(object):
     progress=False
     reproject=False
     tiled=True
+    tempoptions=['BIGTIFF=IF_SAFER']
 
     @property
     def cellsize(self):
