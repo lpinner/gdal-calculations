@@ -33,7 +33,8 @@ Notes: - see __init__.py
 __all__ = [ "Dataset",          "ArrayDataset",
             "ConvertedDataset", "ClippedDataset",
             "WarpedDataset",    "DatasetStack",
-            "TemporaryDataset"
+            "TemporaryDataset", "NewDataset",
+            "Block"
           ]
 
 import numpy as np
@@ -820,7 +821,7 @@ class ConvertedDataset(Dataset):
         except:pass
 
 class NewDataset(Dataset):
-    def __init__(self,filename,outformat,
+    def __init__(self,filename,outformat='GTIFF',
                  cols=None,rows=None,bands=None,datatype=None,
                  srs='',gt=[],nodata=[],options=[],prototype_ds=None):
         use_exceptions=gdal.GetUseExceptions()
