@@ -819,26 +819,31 @@ class ConvertedDataset(Dataset):
         try:gdal.Unlink(self._fn)
         except:pass
 
-class TemporaryDataset(Dataset):
-    def __init__(self,cols,rows,bands,datatype,srs='',gt=[],nodata=[]):
+class NewDataset(Dataset):
+    def __init__(self,filename,outformat,
+                 cols=None,rows=None,bands=None,datatype=None,
+                 srs='',gt=[],nodata=[],options=[],prototype_ds=None):
         use_exceptions=gdal.GetUseExceptions()
         gdal.UseExceptions()
 
-        if Env.tempdir == '/vsimem':
-            #Test to see if enough memory
-            tmpdriver=gdal.GetDriverByName('MEM')
-            tmpds=tmpdriver.Create('',cols,rows,bands,datatype)
-            tmpds=None
-            del tmpds
-
-            self._filedescriptor=-1
-            self._filename='/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
-
+        if prototype_ds is not None:
+            if cols is None:cols=prototype_ds._x_size
+            if rows is None:rows=prototype_ds._y_size
+            if bands is None:bands=prototype_ds._nbands
+            if datatype is None:datatype=prototype_ds._data_type
+            if not srs:srs=prototype_ds._srs
+            if not gt:gt=prototype_ds._gt
+            if nodata==[]:nodata=prototype_ds._nodata
         else:
-            self._filedescriptor,self._filename=tempfile.mkstemp(suffix='.tif')
+            if cols is None:raise TypeError('Expected "cols" or "prototype_ds", got None')
+            if rows is None:raise TypeError('Expected "rows" or "prototype_ds", got None')
+            if bands is None:raise TypeError('Expected "bands" or "prototype_ds", got None')
+            if datatype is None:raise TypeError('Expected "datatype" or "prototype_ds", got None')
+            if not gt:gt=(0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
 
-        self._driver=gdal.GetDriverByName('GTIFF')
-        self._dataset=self._driver.Create (self._filename,cols,rows,bands,datatype,['BIGTIFF=IF_SAFER'])
+        self._filename=filename
+        self._driver=gdal.GetDriverByName(outformat)
+        self._dataset=self._driver.Create (self._filename,cols,rows,bands,datatype,options)
 
         if not use_exceptions:gdal.DontUseExceptions()
         self._dataset.SetGeoTransform(gt)
@@ -852,7 +857,6 @@ class TemporaryDataset(Dataset):
         try:self.FlushCache()
         except:pass
         return Dataset.create_copy(self,outpath,outformat,options)
-    save=create_copy #synonym for backwards compatibility
 
     def write_data(self, data, x_off, y_off):
         if data.ndim==2:
@@ -862,6 +866,31 @@ class TemporaryDataset(Dataset):
             for i in range(data.shape[0]):
                 tmpbnd=self._dataset.GetRasterBand(i+1)
                 tmpbnd.WriteArray(data[i,:,:], x_off, y_off)
+
+class TemporaryDataset(NewDataset):
+    def __init__(self,cols,rows,bands,datatype,srs='',gt=[],nodata=[]):
+        use_exceptions=gdal.GetUseExceptions()
+        gdal.UseExceptions()
+
+        #print cols,rows,bands,datatype,srs,gt,nodata
+        if Env.tempdir == '/vsimem':
+            #Test to see if enough memory
+            tmpdriver=gdal.GetDriverByName('MEM')
+            tmpds=tmpdriver.Create('',cols,rows,bands,datatype)
+            tmpds=None
+            del tmpds
+
+            self._filedescriptor=-1
+            self._filename='/vsimem/%s.tif'%tempfile._RandomNameSequence().next()
+
+        else:
+            self._filedescriptor,self._filename=tempfile.mkstemp(suffix='.tif')
+
+        NewDataset.__init__(self,self._filename,'GTIFF',
+                            cols,rows,bands,datatype,srs,gt,
+                            options=Env.tempoptions)
+
+    save=NewDataset.create_copy #synonym for backwards compatibility
 
     def __del__(self):
         self._dataset=None

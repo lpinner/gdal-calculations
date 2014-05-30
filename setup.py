@@ -1,4 +1,4 @@
-__version__='0.9'
+__version__='1.0dev'
 
 #To build Win exes on linux...
 #mkdir /tmp/wininst
