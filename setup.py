@@ -43,10 +43,10 @@ if 'sdist' not in sys.argv:
 if 'install' in sys.argv:
     for module in REQUIRED:
         try:__import__(module)
-        except ImportError:warnings.warn('%s is required.')
+        except ImportError:raise ImportError('%s is required.'%module)
     for module in RECOMMENDED:
         try:__import__(module)
-        except ImportError:warnings.warn('%s is recommended.')
+        except ImportError:warnings.warn('%s is recommended.'%module)
 else:
     setupkwargs['data_files']=[
                 ('',['README']),
