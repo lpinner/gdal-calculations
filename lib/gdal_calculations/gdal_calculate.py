@@ -144,7 +144,7 @@ def main():
 
     #Required parameters
     argparser.add_argument('--calc', dest='calc', help='calculation in numpy syntax using +-/* or numpy array functions (i.e. numpy.logical_and())', required=True)
-    argparser.add_argument('--outfile', dest='outfile', help='output file to Generate.', required=True)
+    argparser.add_argument('--out', '--outfile', dest='outfile', help='output file to Generate.', required=True)
 
     #Optional parameters
     argparser.add_argument('-q', '--quiet', dest='quiet', default=False, action='store_true', help='Suppress progress meter')
