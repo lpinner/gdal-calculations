@@ -491,6 +491,7 @@ class Band(RasterLike):
     def __getattr__(self, attr):
         '''Pass any other attribute or method calls
            through to the underlying GDALBand/ndarray objects'''
+        if attr=='dtype':raise TypeError #so numpy ufuncs work
         if attr in dir(gdal.Band):return getattr(self._band, attr)
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)

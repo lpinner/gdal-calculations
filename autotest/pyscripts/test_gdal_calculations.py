@@ -677,7 +677,7 @@ def test_gdal_calculations_py_13():
         #Must not be tiled for numexpr
         try:ne.evaluate('ds1+1')
         except:pass
-        else:raise Exception('numexpr.evaluate succeeded and Env.tiled=True')
+        else:raise AssertionError('numexpr.evaluate succeeded and Env.tiled=True')
         Env.tiled=False
         out=ne.evaluate('ds1+1') #returns a numpy ndarray
         assert out.shape==(ds1.RasterXSize,ds1.RasterYSize), "out.shape == %s not %s"% \
@@ -686,13 +686,13 @@ def test_gdal_calculations_py_13():
         #No subscripting or methods in the expression
         try:ne.evaluate('Float32(ds1[0])+1')
         except:pass
-        else:raise Exception('numexpr.evaluate succeeded and with subscripting / methods in the expression')
+        else:raise AssertionError('numexpr.evaluate succeeded and with subscripting / methods in the expression')
 
         #Must be same coordinate systems and dimensions
         #The apply_environment method will reproject/resample/clip if required
         try:ne.evaluate('ds1+ds2')
         except:pass
-        else:raise Exception('numexpr.evaluate succeeded when ds1 and ds2 extents differ')
+        else:raise AssertionError('numexpr.evaluate succeeded when ds1 and ds2 extents differ')
         ds3,ds4=ds1.apply_environment(ds2)
         out=ne.evaluate('ds3+ds4') #returns a numpy ndarray
         assert out.shape==(ds1.RasterXSize,ds1.RasterYSize), "out.shape == %s not %s"% \
