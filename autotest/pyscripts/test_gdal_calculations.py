@@ -48,7 +48,7 @@ def test_gdal_calculations_py_1():
         import gdal_calculations
         from gdal_calculations import Dataset
         return 'success'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -154,7 +154,7 @@ def test_gdal_calculations_py_2():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -177,7 +177,7 @@ def test_gdal_calculations_py_3():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -235,7 +235,7 @@ def test_gdal_calculations_py_4():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -288,7 +288,7 @@ def test_gdal_calculations_py_5():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -423,7 +423,7 @@ def test_gdal_calculations_py_6():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:
         try:np.seterr(**olderr)
@@ -507,7 +507,7 @@ def test_gdal_calculations_py_8():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -567,7 +567,7 @@ def test_gdal_calculations_py_9():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -595,7 +595,7 @@ def test_gdal_calculations_py_10():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -619,7 +619,7 @@ def test_gdal_calculations_py_11():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -657,7 +657,7 @@ def test_gdal_calculations_py_12():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:cleanup()
 
@@ -701,7 +701,7 @@ def test_gdal_calculations_py_13():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:
         cleanup()
@@ -725,7 +725,7 @@ def test_gdal_calculations_py_14():
         return 'success'
     except ImportError:
         return 'skip'
-    except:
+    except AssertionError:
         return fail()
     finally:
         cleanup()
@@ -794,7 +794,7 @@ def test_gdal_calculations_py_15():
 
 
         return 'success'
-    except:
+    except AssertionError:
         return fail()
     finally:
         os.chdir(cd)
@@ -840,7 +840,40 @@ def test_gdal_calculations_py_16():
         assert val==4, "dst[3].ReadAsArray(0, 0, 1, 1)==%s"%repr(val)
 
         return 'success'
-    except:
+    except AssertionError:
+        return fail()
+    finally:
+        cleanup()
+
+def test_gdal_calculations_py_17():
+    try:
+        from gdal_calculations import NewDataset, ArrayDataset, Dataset, Env
+        Env.tempdir='/vsimem'
+
+        #Regular raster
+        f='data/tgc_geo.tif'
+        dsf=Dataset(f)
+        dat=dsf.ReadAsArray()
+
+        dsn=NewDataset('/vsimem/test.tif',prototype_ds=dsf)
+        dsn.write_data(dat)
+        ok=(dsn.ReadAsArray())==(dsf.ReadAsArray())
+        assert ok.all(), "dsn.ReadAsArray()!=dsf.ReadAsArray()"
+        assert dsn.RasterXSize==dsf.RasterXSize, "dsn.RasterXSize!=dsf.RasterXSize"
+        assert dsn.RasterYSize==dsf.RasterYSize, "dsn.RasterYSize!=dsf.RasterYSize"
+        assert dsn.GetGeoTransform()==dsf.GetGeoTransform(), "dsn.GetGeoTransform()!=dsf.GetGeoTransform()"
+        assert dsn.GetProjection()==dsf.GetProjection(), "dsn.GetProjection()!=dsf.GetProjection()"
+
+        dsa=ArrayDataset(dat,prototype_ds=dsf)
+        ok=(dsa.ReadAsArray())==(dsf.ReadAsArray())
+        assert ok.all(), "dsa.ReadAsArray()!=dsf.ReadAsArray()"
+        assert dsa.RasterXSize==dsf.RasterXSize, "dsa.RasterXSize!=dsf.RasterXSize"
+        assert dsa.RasterYSize==dsf.RasterYSize, "dsa.RasterYSize!=dsf.RasterYSize"
+        assert dsa.GetGeoTransform()==dsf.GetGeoTransform(), "dsa.GetGeoTransform()!=dsf.GetGeoTransform()"
+        assert dsa.GetProjection()==dsf.GetProjection(), "dsa.GetProjection()!=dsf.GetProjection()"
+
+        return 'success'
+    except AssertionError:
         return fail()
     finally:
         cleanup()
@@ -890,6 +923,7 @@ gdaltest_list = [
                  test_gdal_calculations_py_14,
                  test_gdal_calculations_py_15,
                  test_gdal_calculations_py_16,
+                 test_gdal_calculations_py_17,
                 ]
 
 if __name__ == '__main__':

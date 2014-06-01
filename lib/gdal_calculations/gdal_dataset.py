@@ -536,6 +536,7 @@ class Dataset(RasterLike):
     def __getattr__(self, attr):
         '''Pass any other attribute or method calls
            through to the underlying GDALDataset object'''
+        if attr=='dtype':raise TypeError #so numpy ufuncs work
         if attr in dir(gdal.Dataset):return getattr(self._dataset, attr)
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
@@ -859,7 +860,7 @@ class NewDataset(Dataset):
         except:pass
         return Dataset.create_copy(self,outpath,outformat,options)
 
-    def write_data(self, data, x_off, y_off):
+    def write_data(self, data, x_off=0, y_off=0):
         if data.ndim==2:
             tmpbnd=self._dataset.GetRasterBand(1)
             tmpbnd.WriteArray(data, x_off, y_off)
