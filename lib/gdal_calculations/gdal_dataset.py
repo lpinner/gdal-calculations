@@ -84,12 +84,14 @@ class RasterLike(object):
     def create_copy(self,outpath,outformat='GTIFF',options=[]):
         ok=(os.path.exists(outpath) and Env.overwrite) or (not os.path.exists(outpath))
         if ok:
+            if Env.progress.enabled:callback=gdal.TermProgress_nocb
+            else:callback=None
             try:                   #Is it a Band
                 ds=self.dataset._dataset
             except AttributeError: #No, it's a Dataset
                 ds=self._dataset
             driver=gdal.GetDriverByName(outformat)
-            ds=driver.CreateCopy(outpath,ds,options=options)
+            ds=driver.CreateCopy(outpath,ds,options=options,callback=callback)
             ds=None
             del ds
             return Dataset(outpath)
@@ -277,8 +279,11 @@ class RasterLike(object):
         def __method__(*args,**kwargs):
             if attr[:8] == '__array_': return None #This breaks numexpr
 
-            if Env.tiled: reader=self.ReadBlocksAsArray()
-            else: reader=[Block(self,0, 0,self.RasterXSize, self.RasterYSize)]
+            if Env.tiled:
+                reader=self.ReadBlocksAsArray()
+                xblock,yblock=self._block_size
+                Env.progress.steps = (self._x_size*self._y_size)/(xblock*yblock*Env.ntiles)
+            else: reader=[Block(self,0, 0,self._x_size, self._y_size)]
 
             tmpds=None
             for b in reader:
@@ -311,10 +316,11 @@ class RasterLike(object):
                                            datatype,self._srs,self._gt, nodata)
 
                 tmpds.write_data(data, b.x_off, b.y_off)
+                Env.progress.update_progress()
 
             try:tmpds.FlushCache() #Fails when file is in /vsimem
             except:pass
-            Env.progress.update_progress()
+
             return tmpds
 
         return __method__
@@ -331,7 +337,10 @@ class RasterLike(object):
             else:
                 dataset1,dataset2=self.check_extent(other)
 
-        if Env.tiled: reader=dataset1.ReadBlocksAsArray()
+        if Env.tiled:
+            reader=dataset1.ReadBlocksAsArray()
+            xblock,yblock=self._block_size
+            Env.progress.steps = (self._x_size*self._y_size)/(xblock*yblock*Env.ntiles)
         else: reader=[Block(dataset1,0, 0,dataset1.RasterXSize, dataset1.RasterYSize)]
         tmpds=None
         for b1 in reader:
@@ -371,10 +380,10 @@ class RasterLike(object):
                 except:tmpds=TemporaryDataset(dataset2._x_size,dataset2._y_size,dataset2._nbands,
                                        datatype,dataset1._srs,dataset1._gt,nodata)
             tmpds.write_data(data, b1.x_off, b1.y_off)
+            Env.progress.update_progress()
 
         try:tmpds.FlushCache()
         except:pass
-        Env.progress.update_progress()
         return tmpds
 
     #===========================================================================
@@ -480,7 +489,6 @@ class Band(RasterLike):
         self._gt=dataset.GetGeoTransform()
         self._block_size=self.GetBlockSize()
         self._nodata=[band.GetNoDataValue()]
-
         self.extent=self.__get_extent__()
 
     def get_raster_band(self,*args,**kwargs):

@@ -154,6 +154,11 @@ def main():
         help='Passes a creation option to the output format driver. Multiple'
         'options may be listed. See format specific documentation for legal'
         'creation options for each format.')
+    argparser.add_argument(
+        '--temp-option', '--to', dest='temp_options', default=['BIGTIFF=SAFER'], action='append',
+        help='Passes a creation option to the GTIFF format driver for temporary rasters. Multiple'
+        'options may be listed. See the GTIFF documentation for legal'
+        'creation options.')
     argparser.add_argument('--cellsize', dest='cellsize', default='DEFAULT', help='Output extent - one of "DEFAULT", "MINOF", "MAXOF", "xres yres" , xyres')
     argparser.add_argument('--extent', dest='extent', default='MINOF', help='Output extent - one of "MINOF", "INTERSECT", "MAXOF", "UNION", "xmin ymin xmax ymax"')
     argparser.add_argument("--nodata", dest="nodata", default=False, action='store_true', help='Account for nodata  (Note this uses masked arrays which can be much slower)')
@@ -164,6 +169,7 @@ def main():
     argparser.add_argument('--resampling', dest='resampling', default='NEAREST', help='Resampling type when reprojecting - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)')
     argparser.add_argument('--snap', dest='snap', default='', help='Filepath of a raster to snap extent coordinates to')
     argparser.add_argument('--tempdir', dest='tempdir', default=tempfile.gettempdir(), help='Temp working directory')
+    argparser.add_argument('--ntiles', dest='ntiles', default=1, help='Number of tiles to process at a time')
 
     args, rasters = argparser.parse_known_args()
 
@@ -173,13 +179,14 @@ def main():
     except:Env.extent=args.extent
     Env.nodata=args.nodata
     Env.enable_numexpr=args.enable_numexpr
+    Env.ntiles=int(args.ntiles)
     Env.overwrite=args.overwrite
     Env.reproject=args.reproject
     try:Env.resampling=int(args.resampling)
     except:Env.resampling=args.resampling
     if args.snap:Env.snap=Dataset(args.snap)
-    Env.tempdir=args.tempdir
     Env.tiled=not args.notile
+    Env.tempdir=args.tempdir
 
     #get Datset objects from input files
     datasets=[]
@@ -197,7 +204,6 @@ def main():
             var=var.lstrip('-')
             locals()[var]=Dataset(path)
             datasets.append(locals()[var])
-
     #Setup progress meter
     if not args.quiet:
         try:
@@ -206,6 +212,7 @@ def main():
             #How many operations/method calls?
             ops=len([i for i in ast.walk(ops.body) if isinstance(i,(ast.BinOp,ast.Call))])
         except:ops=len(datasets)+1
+        print('Running calculation')
         Env.progress=Progress(ops)
 
     #Run the calculation
@@ -221,8 +228,10 @@ def main():
     except:
         try:
             outfile = eval(args.calc)
+            if not args.quiet:print('Saving output')
             outfile.save(args.outfile,args.outformat,args.creation_options)
         except Exception as e:
+            raise
             sys.stderr.write('\n%s: %s\n'%(type(e).__name__,e.message))
             sys.exit(1)
 

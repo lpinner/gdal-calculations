@@ -190,17 +190,21 @@ class Env(object):
 Env=Env()
 
 class Progress(object):
-    def __init__(self,total=0):
-        self.total=float(total)
+    def __init__(self,operations=0):
+        self.steps = 1 #n. steps per operation
+        self.operations=float(operations)
         self.progress=0
-        self.enabled=total>0
+        self.enabled=operations>0
         if self.enabled:
             gdal.TermProgress_nocb(0)
+
+    def reset(self,operations=0):
+        self.__init__(operations)
 
     def update_progress(self):
         if self.enabled:
             self.progress+=1.0
-            gdal.TermProgress_nocb(self.progress/self.total)
+            gdal.TermProgress_nocb(self.progress/(self.operations*self.steps))
 
 Env.progress=Progress()
 

@@ -763,7 +763,7 @@ def test_gdal_calculations_py_15():
         #Try running something that numexpr can handle
         #if numexpr is not available, this should be handled by standard python eval
         out=os.path.join(tmpdir,'tgc_15a.ers')
-        args='--calc="ds+1" --ds="%s" --outfile="%s" --numexpr --of=ERS --redirect-stderr' % (f1,out)
+        args='--calc="ds + 1" --ds="%s" --outfile="%s" --numexpr --of=ERS --redirect-stderr' % (f1,out)
         try:
             ret = gdaltest.runexternal(script+' '+args).strip()
             ds=Dataset(out)

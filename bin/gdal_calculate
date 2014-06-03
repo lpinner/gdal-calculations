@@ -1,1 +1,1 @@
-python -m gdal_calculations $@
+python -m gdal_calculations "$@"
