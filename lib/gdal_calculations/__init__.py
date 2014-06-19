@@ -91,6 +91,9 @@ Classes/Objects:
             tempdir
               - temporary working directory
               - Default = tempfile.tempdir
+            tempoptions
+              - list of GTIFF creation options to use when creating temp rasters
+              - Default = ['BIGTIFF=IF_SAFER']
             tiled
               - use tiled processing - True/False
               - Default = True
@@ -194,7 +197,7 @@ Examples:
 # THE SOFTWARE.
 #
 #-------------------------------------------------------------------------------
-__version__='1.0dev'
+__version__='1.0'
 
 from gdal_dataset import *
 from conversions import *

@@ -708,7 +708,7 @@ def test_gdal_calculations_py_13():
         cleanup('numexpr')
 
 def test_gdal_calculations_py_14():
-    ''' Test numpy methods '''
+    ''' Test some numpy methods '''
     try:
         from gdal_calculations import Dataset, Env
         Env.reproject=True
@@ -722,6 +722,14 @@ def test_gdal_calculations_py_14():
 
         out=np.sum([dsf,dsw])
         out=np.mean([dsf,dsw])
+
+        #None of these will work - invalid __array_struct__
+        #out=np.multiply(dsf,dsw)
+        #out=np.divide(dsf,dsw)
+        #out=np.logaddexp(dsf,dsw)
+        #out=np.power(dsf,2)
+        #out=np.mod(dsf,2)
+
         return 'success'
     except ImportError:
         return 'skip'

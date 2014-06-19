@@ -500,6 +500,7 @@ class Band(RasterLike):
         '''Pass any other attribute or method calls
            through to the underlying GDALBand/ndarray objects'''
         if attr=='dtype':raise TypeError #so numpy ufuncs work
+        #if attr in ('dtype','__array__struct__'):raise TypeError #so numpy ufuncs work
         if attr in dir(gdal.Band):return getattr(self._band, attr)
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
@@ -546,6 +547,7 @@ class Dataset(RasterLike):
         '''Pass any other attribute or method calls
            through to the underlying GDALDataset object'''
         if attr=='dtype':raise TypeError #so numpy ufuncs work
+        #if attr in ('dtype','__array__struct__'):raise TypeError #so numpy ufuncs work
         if attr in dir(gdal.Dataset):return getattr(self._dataset, attr)
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
