@@ -52,6 +52,9 @@ Optional parameters:
                        one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
                        (Default = None)
     --tempdir        : filepath to temporary working directory (can also use /vsimem for in memory tempdir)
+    --tempoptions    : list of GTIFF creation options to use when creating temp rasters
+                       (Default = ['BIGTIFF=IF_SAFER'])
+
 
 
 Example:
@@ -169,6 +172,7 @@ def main():
     argparser.add_argument('--resampling', dest='resampling', default='NEAREST', help='Resampling type when reprojecting - one of "AVERAGE"|"BILINEAR"|"CUBIC"|"CUBICSPLINE"|"LANCZOS"|"MODE"|"NEAREST"|gdal.GRA_*)')
     argparser.add_argument('--snap', dest='snap', default='', help='Filepath of a raster to snap extent coordinates to')
     argparser.add_argument('--tempdir', dest='tempdir', default=tempfile.gettempdir(), help='Temp working directory')
+    argparser.add_argument('--tempoptions', dest='tempoptions', default=['BIGTIFF=IF_SAFER'], action='append', help='Creation GTIFF options for Temp rasters')
     argparser.add_argument('--ntiles', dest='ntiles', default=1, help='Number of tiles to process at a time')
 
     args, rasters = argparser.parse_known_args()
@@ -187,7 +191,8 @@ def main():
     if args.snap:Env.snap=Dataset(args.snap)
     Env.tiled=not args.notile
     Env.tempdir=args.tempdir
-
+    Env.tempoptions=args.tempoptions
+    
     #get Datset objects from input files
     datasets=[]
     while rasters:

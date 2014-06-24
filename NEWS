@@ -1,12 +1,16 @@
-GDAL Calculations 1.0 2014-06-19 (AEST)
+GDAL Calculations 1.0 2014-06-25 (AEST)
 =======================================
 Additions
 ---------
 * Env: add tempoptions environment option
+* Add NewDataset class
 
 Fixes
 -----
 * Fix errors with _some_ numpy ufuncs - Issue #4
+* Fix create_copy with Band objects
+* Fix gdal_calculate expressions with spaces
+* Improve gdal_calculate progress reporting
 
 GDAL Calculations 0.9 2014-03-12 (AEST)
 =======================================

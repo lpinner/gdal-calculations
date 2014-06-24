@@ -85,6 +85,8 @@ Commandline raster calculator [^](#top)
                            one of osgeo.osr.SpatialReference (object)|WKT (string)|EPSG code (integer)
                            (Default = None)
         --tempdir        : filepath to temporary working directory (can also use /vsimem for in memory tempdir)
+        --tempoptions    : list of GTIFF creation options to use when creating temp rasters
+                           (Default = ['BIGTIFF=IF_SAFER'])
 
     Example:
            gdal_calculate --outfile=../testdata/ndvi.tif       \
@@ -179,6 +181,9 @@ Raster calculations library [^](#top)
                 tempdir
                   - temporary working directory
                   - Default = tempfile.tempdir
+                tempoptions
+                  - list of GTIFF creation options to use when creating temp rasters
+                  - Default = ['BIGTIFF=IF_SAFER']
                 tiled
                   - use tiled processing - True/False
                   - Default = True
