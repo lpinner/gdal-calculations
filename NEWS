@@ -1,3 +1,9 @@
+GDAL Calculations 1.0 2015-02-13 (AEST)
+=======================================
+Fixes
+-----
+* Fix errors with positive N-S pixel resolutions - Issue #4
+
 GDAL Calculations 1.0 2014-06-25 (AEST)
 =======================================
 Additions
