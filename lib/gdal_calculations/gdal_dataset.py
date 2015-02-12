@@ -96,7 +96,7 @@ class RasterLike(object):
             del ds
             return Dataset(outpath)
         else:raise RuntimeError('Output %s exists and overwrite is not set.'%outpath)
-    save=create_copy #synonym for backwards compatibility
+    save=create_copy  # synonym for backwards compatibility
 
     def read_blocks_as_array(self, nblocks=None):
         '''Read GDAL Datasets/Bands block by block'''
@@ -527,16 +527,23 @@ class Dataset(RasterLike):
             else:
                 self._dataset = gdal.Open(fp,*args)
 
+        #Issue 8
+        self._gt=self.GetGeoTransform()
+        if self._gt[5] > 0: #positive NS pixel res.
+            tmp_ds = gdal.AutoCreateWarpedVRT(self._dataset)
+            tmp_fn = '/vsimem/%s.vrt'%tempfile._RandomNameSequence().next()
+            self._dataset = gdal.GetDriverByName('VRT').CreateCopy(tmp_fn,tmp_ds)
+            self._gt = self.GetGeoTransform()
+
         self._x_size=self.RasterXSize
         self._y_size=self.RasterYSize
         self._nbands=self.RasterCount
         self._bands=range(self.RasterCount)
         self._data_type=self.GetRasterBand(1).DataType
         self._srs=self.GetProjectionRef()
-        self._gt=self.GetGeoTransform()
         self._block_size=self.GetRasterBand(1).GetBlockSize()
         self._nodata=[b.GetNoDataValue() for b in self]
-
+        
         self.extent=self.__get_extent__()
 
     def __del__(self):
