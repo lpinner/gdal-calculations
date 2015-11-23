@@ -39,7 +39,6 @@ sys.path.insert(0, '../pymod' )
 sys.path.insert(0,'../../lib' )
 
 import gdaltest
-import test_py_scripts
 
 ###############################################################################
 def test_gdal_calculations_py_1():
@@ -886,6 +885,32 @@ def test_gdal_calculations_py_17():
     finally:
         cleanup()
 
+
+def test_gdal_calculations_py_18():
+    try:
+        from gdal_calculations import NewDataset, ArrayDataset, Dataset, Env
+        Env.tempdir='/vsimem'
+
+        #Regular raster
+        f='data/tgc_geo.tif'
+        dsf=Dataset(f)
+        dat=dsf.ReadAsArray()
+
+        dsn=NewDataset('/vsimem/test.tif',prototype_ds=dsf)
+        dsn.set_nodata_value(123)
+        dsn.write_data(dat)
+
+        del dsn
+        dsn=Dataset('/vsimem/test.tif')
+        assert dsn._nodata == [123], "dsn._nodata != [123]"
+        assert dsn[0].GetNoDataValue() == 123, "dsn[0].GetNoDataValue() != 123"
+
+        return 'success'
+    except AssertionError:
+        return fail()
+    finally:
+        cleanup()
+
 #-----------------------------------------------------------
 def fail(reason=''):
     exc_type, exc_value, exc_tb=sys.exc_info()
@@ -932,6 +957,7 @@ gdaltest_list = [
                  test_gdal_calculations_py_15,
                  test_gdal_calculations_py_16,
                  test_gdal_calculations_py_17,
+                 test_gdal_calculations_py_18,
                 ]
 
 if __name__ == '__main__':

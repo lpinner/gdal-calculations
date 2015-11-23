@@ -594,6 +594,21 @@ class Dataset(RasterLike):
     #CamelCase synonym
     BandReadBlocksAsArray=band_read_blocks_as_array
 
+    def set_nodata_value(self, val):
+        '''Set NoData value for all bands'''
+        nodata=[]
+        for i in self._bands:
+            #try:
+                self._dataset.GetRasterBand(i+1).SetNoDataValue(val)
+                nodata.append(val)
+            #except TypeError:pass
+        if nodata:
+            self._nodata=nodata
+
+    #CamelCase synonym
+    SetNoDataValue=set_nodata_value
+
+
 class ClippedDataset(Dataset):
     '''Use a VRT to "clip" to min extent of two rasters'''
 
