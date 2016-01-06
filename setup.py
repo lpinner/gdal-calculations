@@ -44,9 +44,10 @@ setupargs = {
     'url':URL,
     'license':'MIT',
     'keywords':'raster calculations',
-    'packages':find_packages(),
+    'package_dir':{'': 'lib'},
+    'packages':find_packages('lib'),
     'install_requires':REQUIRED,
-    'data_files':[('gdal_calculations',['README','COPYING','NEWS','VERSION'])],
+    'package_data':{'gdal_calculations': ['README','COPYING','NEWS','VERSION']},
     'entry_points':{
         'console_scripts': [
             'gdal_calculate=gdal_calculations.gdal_calculate:main',
