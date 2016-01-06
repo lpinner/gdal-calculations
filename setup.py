@@ -1,17 +1,15 @@
-__version__='1.1'
+# Always prefer setuptools over distutils
+from setuptools import setup, find_packages
+from codecs import open
+from os import path
+import sys
 
-#To build Win exes on linux...
-#mkdir /tmp/wininst
-#cd /tmp/wininst
-#apt-get source python2.7-dev
-#sudo cp python2.7*/Lib/distutils/command/*.exe /usr/lib/python2.7/distutils/command/
-#cd 
-#rm -rf /tmp/wininst
+here = path.abspath(path.dirname(__file__))
+sys.path.insert(0, path.join(here,'lib'))
 
-import os,sys,warnings
-from distutils.core import setup
-sys.path.insert(0,'lib')
-
+# Get the version from the VERSION file
+with open(path.join(here, 'VERSION'), encoding='utf-8') as f:
+    version = f.read()
 
 SHORTDESC='Simple tiled (or untiled if desired) raster calculations (AKA "map algebra")'
 
@@ -21,77 +19,39 @@ There is a commandline raster calculator and a raster calculations library.'''
 
 AUTHOR="Luke Pinner"
 AUTHOR_EMAIL="gdal.calculations@mailinator.com"
-URL="https://code.google.com/p/gdal-calculations"
+URL="https://github.com/lpinner/metageta"
 
 CLASSIFIERS = [ 'Operating System :: OS Independent',
                 'License :: OSI Approved :: MIT License',
-                'Topic :: Scientific/Engineering :: GIS',
-                'Development Status :: 4 - Beta']
+                'Topic :: Scientific/Engineering :: GIS']
 
-REQUIRED = ['osgeo.gdal','numpy']
-RECOMMENDED=['numexpr']
-
-script=os.path.join('bin', 'gdal_calculate')
-scripts=[script,script+'.cmd']
-
-setupkwargs={}
-
-if 'sdist' not in sys.argv:
-    if os.name=='nt':del scripts[0]
-    else:del scripts[1]
+REQUIRED = ['GDAL >= 1.7, < 2.0','numpy >= 1.7']
 
 if 'install' in sys.argv:
     for module in REQUIRED:
         try:__import__(module)
         except ImportError:raise ImportError('%s is required.'%module)
-    for module in RECOMMENDED:
-        try:__import__(module)
-        except ImportError:warnings.warn('%s is recommended.'%module)
-else:
-    setupkwargs['data_files']=[
-                ('',['README']),
-                ('',['COPYING']),
-                ('',['NEWS'])
-               ]
 
-if 'bdist' in sys.argv:
-    from distutils.command.bdist_wininst import bdist_wininst as _bdist_wininst
-    from distutils.command.bdist_wininst import __file__ as _bdist_file
-    from sysconfig import get_python_version
+setupargs = {
+    'name':'gdal_calculations',
+    'version':version,
+    'description':SHORTDESC,
+    'long_description':LONGDESC,
+    'platforms':['linux','windows','darwin'],
+    'author':AUTHOR,
+    'author_email':AUTHOR_EMAIL,
+    'classifiers': CLASSIFIERS,
+    'url':URL,
+    'license':'MIT',
+    'keywords':'raster calculations',
+    'packages':find_packages(),
+    'install_requires':REQUIRED,
+    'data_files':[('gdal_calculations',['README','COPYING','NEWS','VERSION'])],
+    'entry_points':{
+        'console_scripts': [
+            'gdal_calculate=gdal_calculations.gdal_calculate:main',
+        ],
+    }
+}
 
-    class bdist_wininst(_bdist_wininst):
-        """Patched wininst to allow building from wininst-9.0*.exe. on linux
-           and wininst-9.0-amd64.exe on Win32
-        """
-        def get_exe_bytes (self):
-            cur_version = get_python_version()
-            bv=9.0
-            directory = os.path.dirname(_bdist_file)
-            if self.plat_name != 'win32' and self.plat_name[:3] == 'win':
-                sfix = self.plat_name[3:]
-            else:
-                sfix = ''
-
-            filename = os.path.join(directory, "wininst-%.1f%s.exe" % (bv, sfix))
-            f = open(filename, "rb")
-            try:
-                return f.read()
-            finally:
-                f.close()
-    setupkwargs['cmdclass']={'bdist_wininst':bdist_wininst}
-
-setup(
-    name = 'gdal-calculations',
-    version = __version__,
-    license = 'MIT',
-    description=SHORTDESC,
-    long_description=LONGDESC,
-    author=AUTHOR,
-    author_email=AUTHOR_EMAIL,
-    classifiers = CLASSIFIERS,
-    url=URL,
-    scripts=scripts,
-    package_dir={'': 'lib'},
-    packages=['gdal_calculations'],
-    **setupkwargs
-    )
+setup(**setupargs)
