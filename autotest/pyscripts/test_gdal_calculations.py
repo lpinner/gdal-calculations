@@ -28,7 +28,6 @@
 
 import sys
 import os
-import shutil
 import tempfile
 import traceback
 import numpy as np
@@ -49,7 +48,8 @@ def test_gdal_calculations_py_1():
         return 'success'
     except AssertionError:
         return fail()
-    finally:cleanup()
+    finally:
+        cleanup()
 
 def test_gdal_calculations_py_2():
     ''' Test environment getting/setting '''
@@ -137,13 +137,18 @@ def test_gdal_calculations_py_2():
         else:osr.DontUseExceptions()
 
         #Get/set tempdir
-        assert Env.tempdir==tempfile.tempdir, 'Env.resampling != %s'%tempfile.tempdir
-        Env.tempdir='tmp' #Exists in autotest/pyscripts/tmp
-        try:Env.tempdir="INCORRECT"
-        except:pass
-        else:
-            gdaltest.post_reason('Env.tempdir accepted an incorrect value')
-            return 'fail'
+        try:
+            tempdir=tempfile.tempdir #use to reset tempfile.tempdir to default
+            assert Env.tempdir==tempfile.tempdir, 'Env.tempdir != %s'%tempfile.tempdir
+            Env.tempdir='tmp' #autotest/pyscripts/tmp
+            assert tempfile.tempdir=='tmp', 'tempfile.tempdir != tmp'
+            try:Env.tempdir="INCORRECT"
+            except:pass
+            else:
+                gdaltest.post_reason('Env.tempdir accepted an incorrect value')
+                return 'fail'
+        finally:
+            tempfile.tempdir=tempdir
 
         #Get/set tiled
         assert Env.tiled==True, "Env.tiled != True ('%s')"%Env.tiled
@@ -155,7 +160,8 @@ def test_gdal_calculations_py_2():
         return 'skip'
     except AssertionError:
         return fail()
-    finally:cleanup()
+    finally:
+        cleanup()
 
 def test_gdal_calculations_py_3():
     ''' Test dataset open from filepath and gdal.Dataset object '''
@@ -248,39 +254,39 @@ def test_gdal_calculations_py_5():
         dsf=Dataset(f)
 
         d=Byte(dsf)
-        assert d._data_type==gdal.GDT_Byte, "data_type!=Byte (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Byte, "data_type!=Byte (%s)"%gdal.GetDataTypeName(d.data_type)
         d=Int16(dsf)
-        assert d._data_type==gdal.GDT_Int16, "data_type!=Int16 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Int16, "data_type!=Int16 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=UInt32(dsf)
-        assert d._data_type==gdal.GDT_UInt32, "data_type!=UInt32 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_UInt32, "data_type!=UInt32 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=Int32(dsf)
-        assert d._data_type==gdal.GDT_Int32, "data_type!=Int32 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Int32, "data_type!=Int32 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=Float32(dsf)
-        assert d._data_type==gdal.GDT_Float32, "data_type!=Float32 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Float32, "data_type!=Float32 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=Float64(dsf)
-        assert d._data_type==gdal.GDT_Float64, "data_type!=Float64 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Float64, "data_type!=Float64 (%s)"%gdal.GetDataTypeName(d.data_type)
 
         #Warped VRT
         f='data/tgc_alb.vrt'
         dsf=Dataset(f)
 
         d=Byte(dsf)
-        assert d._data_type==gdal.GDT_Byte, "data_type!=Byte (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Byte, "data_type!=Byte (%s)"%gdal.GetDataTypeName(d.data_type)
         d=None
         d=Int16(dsf)
-        assert d._data_type==gdal.GDT_Int16, "data_type!=Int16 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Int16, "data_type!=Int16 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=None
         d=UInt32(dsf)
-        assert d._data_type==gdal.GDT_UInt32, "data_type!=UInt32 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_UInt32, "data_type!=UInt32 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=None
         d=Int32(dsf)
-        assert d._data_type==gdal.GDT_Int32, "data_type!=Int32 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Int32, "data_type!=Int32 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=None
         d=Float32(dsf)
-        assert d._data_type==gdal.GDT_Float32, "data_type!=Float32 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Float32, "data_type!=Float32 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=None
         d=Float64(dsf)
-        assert d._data_type==gdal.GDT_Float64, "data_type!=Float64 (%s)"%gdal.GetDataTypeName(d._data_type)
+        assert d.data_type==gdal.GDT_Float64, "data_type!=Float64 (%s)"%gdal.GetDataTypeName(d.data_type)
         d=None
 
         dsf=None
@@ -448,10 +454,10 @@ def test_gdal_calculations_py_7():
 
         Env.reproject=True
         out_alb=dsw+dsf
-        assert out_alb._srs==dsw._srs, "out_alb._srs!=dsw._srs"
+        assert out_alb.srs==dsw.srs, "out_alb.srs!=dsw.srs"
 
         out_geo=dsf+dsw
-        assert out_geo._srs==dsf._srs, "out_geo._srs==dsf._srs"
+        assert out_geo.srs==dsf.srs, "out_geo.srs==dsf.srs"
 
         dsf,dsw,out_alb,out_geo=None,None,None,None
         return 'success'
@@ -460,7 +466,9 @@ def test_gdal_calculations_py_7():
     except Exception as e:
         gdaltest.post_reason(e.message)
         return 'fail'
-    finally:cleanup()
+    finally:
+        cleanup()
+        cleanup('tempfile')
 
 def test_gdal_calculations_py_8():
     ''' Test on-the-fly clipping '''
@@ -524,40 +532,40 @@ def test_gdal_calculations_py_9():
 
         #Default cellsize = left dataset
         out=ds1+ds2
-        assert approx_equal([out._gt[1],out._gt[5]],[ds1._gt[1],ds1._gt[5]]),'out cellsize!=ds1 cellsize'
+        assert approx_equal([out.gt[1],out.gt[5]],[ds1.gt[1],ds1.gt[5]]),'out cellsize!=ds1 cellsize'
         out=ds2+ds1
-        assert approx_equal([out._gt[1],out._gt[5]],[ds2._gt[1],ds2._gt[5]]),'out cellsize!=ds2 cellsize'
+        assert approx_equal([out.gt[1],out.gt[5]],[ds2.gt[1],ds2.gt[5]]),'out cellsize!=ds2 cellsize'
 
         #MINOF cellsize
         Env.cellsize='MINOF'
         out=ds1+ds2
-        assert approx_equal([out._gt[1],out._gt[5]],[ds1._gt[1],ds1._gt[5]]),'Env.cellsize=MINOF and out cellsize!=ds1 cellsize'
+        assert approx_equal([out.gt[1],out.gt[5]],[ds1.gt[1],ds1.gt[5]]),'Env.cellsize=MINOF and out cellsize!=ds1 cellsize'
         out=ds2+ds1
-        assert approx_equal([out._gt[1],out._gt[5]],[ds1._gt[1],ds1._gt[5]]),'Env.cellsize=MINOF and out cellsize!=ds1 cellsize'
+        assert approx_equal([out.gt[1],out.gt[5]],[ds1.gt[1],ds1.gt[5]]),'Env.cellsize=MINOF and out cellsize!=ds1 cellsize'
 
         #MAXOF cellsize
         Env.cellsize='MAXOF'
         out=ds1+ds2
-        assert approx_equal([out._gt[1],out._gt[5]],[ds2._gt[1],ds2._gt[5]]),'Env.cellsize=MAXOF and out cellsize!=ds2 cellsize'
+        assert approx_equal([out.gt[1],out.gt[5]],[ds2.gt[1],ds2.gt[5]]),'Env.cellsize=MAXOF and out cellsize!=ds2 cellsize'
         out=ds2+ds1
-        assert approx_equal([out._gt[1],out._gt[5]],[ds2._gt[1],ds2._gt[5]]),'Env.cellsize=MAXOF and out cellsize!=ds2 cellsize'
+        assert approx_equal([out.gt[1],out.gt[5]],[ds2.gt[1],ds2.gt[5]]),'Env.cellsize=MAXOF and out cellsize!=ds2 cellsize'
 
         #specific cellsize
         Env.cellsize=0.015
         out=ds1+ds2
-        assert approx_equal([out._gt[1],out._gt[5]],[0.015,-0.015]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        assert approx_equal([out.gt[1],out.gt[5]],[0.015,-0.015]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out.gt[1],abs(out.gt[5]))
         out=ds2+ds1
-        assert approx_equal([out._gt[1],out._gt[5]],[0.015,-0.015]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        assert approx_equal([out.gt[1],out.gt[5]],[0.015,-0.015]),'Env.cellsize=0.015 and out cellsize==(%s,%s)'%(out.gt[1],abs(out.gt[5]))
         Env.cellsize=(0.019,0.018)
         out=ds1+ds2
-        assert approx_equal([out._gt[1],out._gt[5]],[0.019,-0.018]),'Env.cellsize=(0.019,0.018) and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        assert approx_equal([out.gt[1],out.gt[5]],[0.019,-0.018]),'Env.cellsize=(0.019,0.018) and out cellsize==(%s,%s)'%(out.gt[1],abs(out.gt[5]))
         out=ds2+ds1
-        assert approx_equal([out._gt[1],out._gt[5]],[0.019,-0.018]),'Env.cellsize=(0.019,0.018) and out cellsize==(%s,%s)'%(out._gt[1],abs(out._gt[5]))
+        assert approx_equal([out.gt[1],out.gt[5]],[0.019,-0.018]),'Env.cellsize=(0.019,0.018) and out cellsize==(%s,%s)'%(out.gt[1],abs(out.gt[5]))
 
         #Inappropriate cellsize
         Env.cellsize=25
         out=ds1+1 #Environment settings don't get applied with a single raster in the expression
-        assert not approx_equal([out._gt[1],out._gt[5]],[25,-25]),'Env.cellsize=25 and out cellsize==%s'%(out._gt[1])
+        assert not approx_equal([out.gt[1],out.gt[5]],[25,-25]),'Env.cellsize=25 and out cellsize==%s'%(out.gt[1])
         try:out=ds1+ds1
         except:pass
         else:raise Exception('Inappropriate cellsize ds1+ds1')
@@ -584,11 +592,11 @@ def test_gdal_calculations_py_10():
 
         Env.snap=ds2
         out=ds1+ds2
-        assert approx_equal([out._gt[0],out._gt[3]],[ds2._gt[0],ds2._gt[3]]),'out geotransform doesnae match ds2'
+        assert approx_equal([out.gt[0],out.gt[3]],[ds2.gt[0],ds2.gt[3]]),'out geotransform doesnae match ds2'
 
         Env.snap=snap_ds
         out=ds2+ds1
-        assert approx_equal([out._gt[0],out._gt[3]],[snap_ds._gt[0],snap_ds._gt[3]]),'out geotransform doesnae match snap_ds'
+        assert approx_equal([out.gt[0],out.gt[3]],[snap_ds.gt[0],snap_ds.gt[3]]),'out geotransform doesnae match snap_ds'
 
         ds1,ds2,snap_ds,out=None,None,None,None
         return 'success'
@@ -611,7 +619,7 @@ def test_gdal_calculations_py_11():
         ds2=Dataset(f)
 
         out=ds1[0]+ds2[0]
-        outsrs=osr.SpatialReference(out._srs)
+        outsrs=osr.SpatialReference(out.srs)
         assert Env.srs.IsSame(outsrs),'out srs != Env.srs'
 
         ds1,ds2,out=None,None,None
@@ -902,8 +910,26 @@ def test_gdal_calculations_py_18():
 
         del dsn
         dsn=Dataset('/vsimem/test.tif')
-        assert dsn._nodata == [123], "dsn._nodata != [123]"
+        assert dsn.nodata == [123], "dsn.nodata != [123]"
         assert dsn[0].GetNoDataValue() == 123, "dsn[0].GetNoDataValue() != 123"
+
+        return 'success'
+    except AssertionError:
+        return fail()
+    finally:
+        cleanup()
+
+def test_gdal_calculations_py_19():
+    try:
+        from gdal_calculations import Dataset, Env
+        Env.tempdir='/vsimem'
+        Env.tiled = False
+
+        #Regular raster
+        f='data/tgc_geo.tif'
+        dsf=Dataset(f)
+        bnd=dsf[0]
+        test = bnd * 1.0
 
         return 'success'
     except AssertionError:
@@ -924,7 +950,7 @@ def fail(reason=''):
 
 def cleanup(name='gdal_calculations'):
     ''' Unload specified modules '''
-    for mod in list(sys.modules):
+    for mod in sorted(list(sys.modules)):
         if mod[:len(name)]==name:
             del sys.modules[mod]
     return
@@ -961,6 +987,12 @@ gdaltest_list = [
                 ]
 
 if __name__ == '__main__':
+    import tempfile
+    tempfile.tempdir = 'tmp'
     gdaltest.setup_run( 'test_gdal_calculations_py' )
     gdaltest.run_tests( gdaltest_list )
     gdaltest.summarize()
+    for f in os.listdir('tmp'):
+        p = os.path.join('tmp',f)
+        if os.path.isfile(p) and f != 'do-not-remove':
+            os.unlink(p)

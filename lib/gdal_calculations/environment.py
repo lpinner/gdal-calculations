@@ -33,7 +33,7 @@ import numpy as np
 from osgeo import gdal, osr
 
 # Processing environment
-class Env(object):
+class _Env(object):
     ''' Class for setting various environment properties
         Notes: - see __init__.py
     '''
@@ -133,7 +133,7 @@ class Env(object):
 
     @snap.setter
     def snap(self, value):
-        try:a=value._gt #Instead of checking isinstance(RasterLike,value) to avoid cyclic import
+        try:a=value.gt #Instead of checking isinstance(RasterLike,value) to avoid cyclic import
         except:raise RuntimeError('%s is not a Dataset/Band object'%value)
         self._snap=value
 
@@ -187,7 +187,7 @@ class Env(object):
             tempfile.tempdir=value
             self._tempdir=value
 
-Env=Env()
+Env=_Env()
 
 class Progress(object):
     def __init__(self,operations=0):

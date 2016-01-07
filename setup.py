@@ -42,7 +42,6 @@ setupargs = {
     'author_email':AUTHOR_EMAIL,
     'classifiers': CLASSIFIERS,
     'url':URL,
-    'license':'MIT',
     'keywords':'raster calculations',
     'package_dir':{'': 'lib'},
     'packages':find_packages('lib'),

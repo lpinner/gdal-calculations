@@ -40,6 +40,7 @@ __all__ = [ "Dataset",          "ArrayDataset",
 import numpy as np
 from osgeo import gdal, gdal_array, osr
 import os, tempfile, operator, sys
+from contextlib import contextmanager
 
 from environment import Env,Progress
 import geometry
@@ -101,10 +102,10 @@ class RasterLike(object):
     def read_blocks_as_array(self, nblocks=None):
         '''Read GDAL Datasets/Bands block by block'''
 
-        ncols=self._x_size
-        nrows=self._y_size
+        ncols=self.x_size
+        nrows=self.y_size
         if nblocks is None:nblocks=Env.ntiles
-        xblock,yblock=self._block_size
+        xblock,yblock=self.block_size
 
         if xblock==ncols:
             yblock*=nblocks
@@ -134,27 +135,27 @@ class RasterLike(object):
     def __check_cellsize__(self,dataset1,dataset2):
         #Do we need to resample?
         if Env.cellsize=='MAXOF':
-            px=max(dataset1._gt[1],dataset2._gt[1])
-            py=max(abs(dataset1._gt[5]),abs(dataset2._gt[5]))
-            if (dataset1._gt[1],abs(dataset1._gt[5]))!=(px,py):
-                dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1, (px,py))
-            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(px,py):
-                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (px,py))
+            px=max(dataset1.gt[1],dataset2.gt[1])
+            py=max(abs(dataset1.gt[5]),abs(dataset2.gt[5]))
+            if (dataset1.gt[1],abs(dataset1.gt[5]))!=(px,py):
+                dataset1=WarpedDataset(dataset1,dataset1.srs, dataset1, (px,py))
+            if (dataset2.gt[1],abs(dataset2.gt[5]))!=(px,py):
+                dataset2=WarpedDataset(dataset2,dataset1.srs, dataset1, (px,py))
         elif Env.cellsize=='MINOF':
-            px=min(dataset1._gt[1],dataset2._gt[1])
-            py=min(abs(dataset1._gt[5]),abs(dataset2._gt[5]))
-            if (dataset1._gt[1],abs(dataset1._gt[5]))!=(px,py):
-                dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1, (px,py))
-            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(px,py):
-                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (px,py))
+            px=min(dataset1.gt[1],dataset2.gt[1])
+            py=min(abs(dataset1.gt[5]),abs(dataset2.gt[5]))
+            if (dataset1.gt[1],abs(dataset1.gt[5]))!=(px,py):
+                dataset1=WarpedDataset(dataset1,dataset1.srs, dataset1, (px,py))
+            if (dataset2.gt[1],abs(dataset2.gt[5]))!=(px,py):
+                dataset2=WarpedDataset(dataset2,dataset1.srs, dataset1, (px,py))
         elif Env.cellsize!='DEFAULT':
-            if (dataset1._gt[1],abs(dataset1._gt[5]))!=Env.cellsize:
-                dataset1=WarpedDataset(dataset1,dataset1._srs, dataset1,Env.cellsize)
-            if (dataset2._gt[1],abs(dataset2._gt[5]))!=Env.cellsize:
-                dataset2=WarpedDataset(dataset2,dataset2._srs, dataset2,Env.cellsize)
+            if (dataset1.gt[1],abs(dataset1.gt[5]))!=Env.cellsize:
+                dataset1=WarpedDataset(dataset1,dataset1.srs, dataset1,Env.cellsize)
+            if (dataset2.gt[1],abs(dataset2.gt[5]))!=Env.cellsize:
+                dataset2=WarpedDataset(dataset2,dataset2.srs, dataset2,Env.cellsize)
         else: #Env.cellsize=='DEFAULT'
-            if (dataset2._gt[1],abs(dataset2._gt[5]))!=(dataset1._gt[1],abs(dataset1._gt[5])):
-                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1, (dataset1._gt[1],abs(dataset1._gt[5])))
+            if (dataset2.gt[1],abs(dataset2.gt[5]))!=(dataset1.gt[1],abs(dataset1.gt[5])):
+                dataset2=WarpedDataset(dataset2,dataset1.srs, dataset1, (dataset1.gt[1],abs(dataset1.gt[5])))
 
         return dataset1,dataset2
 
@@ -177,8 +178,8 @@ class RasterLike(object):
         except AttributeError: #ext is [xmin,ymin,xmax,ymax]
             if Env.snap:
                 s_ext=Env.snap.extent
-                s_gt=Env.snap._gt
-                gt=[ext[0], dataset1._gt[1], dataset1._gt[2], ext[3], dataset1._gt[5], dataset1._gt[5]]
+                s_gt=Env.snap.gt
+                gt=[ext[0], dataset1.gt[1], dataset1.gt[2], ext[3], dataset1.gt[5], dataset1.gt[5]]
                 ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
 
         if dataset1.extent!=ext: dataset1=ClippedDataset(dataset1,ext)
@@ -189,8 +190,8 @@ class RasterLike(object):
     def __check_srs__(self,dataset1,dataset2):
         srs=Env.srs
 
-        srs1=osr.SpatialReference(dataset1._srs)
-        srs2=osr.SpatialReference(dataset2._srs)
+        srs1=osr.SpatialReference(dataset1.srs)
+        srs2=osr.SpatialReference(dataset2.srs)
 
         #Do we need to reproject?
         if srs:
@@ -200,14 +201,14 @@ class RasterLike(object):
                 dataset2=WarpedDataset(dataset2,srs.ExportToWkt(), dataset1)
         elif not srs1.IsSame(srs2):
             if  Env.reproject:
-                dataset2=WarpedDataset(dataset2,dataset1._srs, dataset1)
+                dataset2=WarpedDataset(dataset2,dataset1.srs, dataset1)
             else:raise RuntimeError('Coordinate systems differ and Env.reproject==False')
 
         return dataset1,dataset2
 
     def __get_extent__(self):
         #Returns [(ulx,uly),(llx,lly),(lrx,lry),(urx,urx)]
-        ext=geometry.GeoTransformToExtent(self._gt,self._x_size,self._y_size)
+        ext=geometry.GeoTransformToExtent(self.gt,self.x_size,self.y_size)
         return [ext[1][0],ext[1][1],ext[3][0],ext[3][1]]
 
     def __getnodes__(self, root, nodetype, name, index=True):
@@ -225,8 +226,8 @@ class RasterLike(object):
         if not Env.snap:return ext
         else:
             s_ext=Env.snap.extent
-            s_gt=Env.snap._gt
-            gt=[ext[0], self._gt[1], self._gt[2], ext[3], self._gt[5], self._gt[5]]
+            s_gt=Env.snap.gt
+            gt=[ext[0], self.gt[1], self.gt[2], ext[3], self.gt[5], self.gt[5]]
             ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
             return ext
 
@@ -235,8 +236,8 @@ class RasterLike(object):
         if not Env.snap:return ext
         else:
             s_ext=Env.snap.extent
-            s_gt=Env.snap._gt
-            gt=[ext[0], self._gt[1], self._gt[2], ext[3], self._gt[5], self._gt[5]]
+            s_gt=Env.snap.gt
+            gt=[ext[0], self.gt[1], self.gt[2], ext[3], self.gt[5], self.gt[5]]
             ext=geometry.SnapExtent(ext, gt, s_ext, s_gt)
             return ext
 
@@ -281,25 +282,25 @@ class RasterLike(object):
 
             if Env.tiled:
                 reader=self.ReadBlocksAsArray()
-                xblock,yblock=self._block_size
-                Env.progress.steps = (self._x_size*self._y_size)/(xblock*yblock*Env.ntiles)
-            else: reader=[Block(self,0, 0,self._x_size, self._y_size)]
+                xblock,yblock=self.block_size
+                Env.progress.steps = (self.x_size*self.y_size)/(xblock*yblock*Env.ntiles)
+            else: reader=[Block(self,0, 0,self.x_size, self.y_size)]
 
             tmpds=None
             for b in reader:
 
                 if Env.nodata:
-                    if b.data.ndim==2:mask=(b.data==self._nodata[0])
-                    else:mask=np.array([b.data[i,:,:]==self._nodata[i] for i in range(b.data.shape[0])])
+                    if b.data.ndim==2:mask=(b.data==self.nodata[0])
+                    else:mask=np.array([b.data[i,:,:]==self.nodata[i] for i in range(b.data.shape[0])])
                     b.data=np.ma.MaskedArray(b.data,mask)
-                    b.data.fill_value=self._nodata[0]
-                    nodata=[self._nodata[0]]*self._nbands
-                else:nodata=self._nodata
+                    b.data.fill_value=self.nodata[0]
+                    nodata=[self.nodata[0]]*self.nbands
+                else:nodata=self.nodata
 
                 data=getattr(b.data,attr)(*args,**kwargs)
 
                 #Sanity check - returns array of same dimensions as block
-                if data.shape not in [((b.y_size,b.x_size)),(self._nbands,b.y_size,b.x_size)]:
+                if data.shape not in [((b.y_size,b.x_size)),(self.nbands,b.y_size,b.x_size)]:
                     if Env.tiled:raise RuntimeError('When Env.tiled==True, the "%s" method is not supported.'%attr)
                     else:return data
 
@@ -312,8 +313,8 @@ class RasterLike(object):
                     if data.ndim==2:nbands=1
                     else:nbands=data.shape[0]
 
-                    tmpds=TemporaryDataset(self._x_size,self._y_size,nbands,
-                                           datatype,self._srs,self._gt, nodata)
+                    tmpds=TemporaryDataset(self.x_size,self.y_size,nbands,
+                                           datatype,self.srs,self.gt, nodata)
 
                 tmpds.write_data(data, b.x_off, b.y_off)
                 Env.progress.update_progress()
@@ -339,30 +340,30 @@ class RasterLike(object):
 
         if Env.tiled:
             reader=dataset1.ReadBlocksAsArray()
-            xblock,yblock=self._block_size
-            Env.progress.steps = (self._x_size*self._y_size)/(xblock*yblock*Env.ntiles)
-        else: reader=[Block(dataset1,0, 0,dataset1.RasterXSize, dataset1.RasterYSize)]
+            xblock,yblock=self.block_size
+            Env.progress.steps = (self.x_size*self.y_size)/(xblock*yblock*Env.ntiles)
+        else: reader=[Block(dataset1,0, 0,dataset1.x_size, dataset1.y_size)]
         tmpds=None
         for b1 in reader:
             if Env.nodata:
-                if b1.data.ndim==2:mask=(b1.data==dataset1._nodata[0])
-                else:mask=np.array([b1.data[i,:,:]==dataset1._nodata[i] for i in range(b1.data.shape[0])])
+                if b1.data.ndim==2:mask=(b1.data==dataset1.nodata[0])
+                else:mask=np.array([b1.data[i,:,:]==dataset1.nodata[i] for i in range(b1.data.shape[0])])
                 b1.data=np.ma.MaskedArray(b1.data,mask)
-                b1.data.fill_value=dataset1._nodata[0]
-                nodata=[dataset1._nodata[0]]*dataset1._nbands
-            else:nodata=dataset1._nodata
+                b1.data.fill_value=dataset1.nodata[0]
+                nodata=[dataset1.nodata[0]]*dataset1.nbands
+            else:nodata=dataset1.nodata
 
             if dataset2 is not None: #zero is valid
                 if isinstance(dataset2,RasterLike):
                     b2=Block(dataset2,b1.x_off, b1.y_off,b1.x_size, b1.y_size)
 
                     if Env.nodata:
-                        if b2.data.ndim==2:mask=(b2.data==dataset2._nodata[0])
-                        else:mask=np.array([b2.data[i,:,:]==dataset2._nodata[i] for i in range(b2.data.shape[0])])
+                        if b2.data.ndim==2:mask=(b2.data==dataset2.nodata[0])
+                        else:mask=np.array([b2.data[i,:,:]==dataset2.nodata[i] for i in range(b2.data.shape[0])])
                         b2.data=np.ma.MaskedArray(b2.data,mask)
-                        b2.data.fill_value=dataset1._nodata[0]
-                        nodata=[dataset1._nodata[0]]*dataset2._nbands
-                    else:nodata=dataset1._nodata
+                        b2.data.fill_value=dataset1.nodata[0]
+                        nodata=[dataset1.nodata[0]]*dataset2.nbands
+                    else:nodata=dataset1.nodata
 
                     if swapped:data=op(b2.data, b1.data)
                     else:data=op(b1.data, b2.data)
@@ -375,10 +376,10 @@ class RasterLike(object):
             if not tmpds:
                 datatype=gdal_array.NumericTypeCodeToGDALTypeCode(data.dtype.type)
                 if not datatype:datatype=gdal.GDT_Byte
-                try:tmpds=TemporaryDataset(dataset1._x_size,dataset1._y_size,dataset1._nbands,
-                                       datatype,dataset1._srs,dataset1._gt,nodata)
-                except:tmpds=TemporaryDataset(dataset2._x_size,dataset2._y_size,dataset2._nbands,
-                                       datatype,dataset1._srs,dataset1._gt,nodata)
+                try:tmpds=TemporaryDataset(dataset1.x_size,dataset1.y_size,dataset1.nbands,
+                                       datatype,dataset1.srs,dataset1.gt,nodata)
+                except:tmpds=TemporaryDataset(dataset2.x_size,dataset2.y_size,dataset2.nbands,
+                                       datatype,dataset1.srs,dataset1.gt,nodata)
             tmpds.write_data(data, b1.x_off, b1.y_off)
             Env.progress.update_progress()
 
@@ -477,18 +478,18 @@ class Band(RasterLike):
         through to the underlying GDALBand/ndarray objects
     '''
     def __init__(self,band,dataset,bandnum=0):
-        self._band = band
+        self.band = band
         self.dataset=dataset #Keep a link to the parent Dataset object
 
-        self._x_size=dataset._x_size
-        self._y_size=dataset._y_size
-        self._nbands=1
-        self._bands=[bandnum]#Keep track of band number, zero based index
-        self._data_type=self.DataType
-        self._srs=dataset.GetProjectionRef()
-        self._gt=dataset.GetGeoTransform()
-        self._block_size=self.GetBlockSize()
-        self._nodata=[band.GetNoDataValue()]
+        self.x_size=dataset.x_size
+        self.y_size=dataset.y_size
+        self.nbands=1
+        self.bands=[bandnum]#Keep track of band number, zero based index
+        self.data_type=self.DataType
+        self.srs=dataset.GetProjectionRef()
+        self.gt=dataset.GetGeoTransform()
+        self.block_size=self.GetBlockSize()
+        self.nodata=[band.GetNoDataValue()]
         self.extent=self.__get_extent__()
 
     def get_raster_band(self,*args,**kwargs):
@@ -501,7 +502,7 @@ class Band(RasterLike):
            through to the underlying GDALBand/ndarray objects'''
         if attr=='dtype':raise TypeError #so numpy ufuncs work
         #if attr in ('dtype','__array__struct__'):raise TypeError #so numpy ufuncs work
-        elif attr in dir(gdal.Band):return getattr(self._band, attr)
+        elif attr in dir(gdal.Band):return getattr(self.band, attr)
         elif attr in dir(gdal.Dataset):return getattr(self.dataset, attr)
         elif attr in dir(np.ndarray):
             if callable(getattr(np.ndarray,attr)):return self.__ndarraymethod__(attr)
@@ -529,22 +530,22 @@ class Dataset(RasterLike):
                 self._dataset = gdal.Open(fp,*args)
 
         #Issue 8
-        self._gt=self.GetGeoTransform()
-        if self._gt[5] > 0: #positive NS pixel res.
+        self.gt=self.GetGeoTransform()
+        if self.gt[5] > 0: #positive NS pixel res.
             tmp_ds = gdal.AutoCreateWarpedVRT(self._dataset)
             tmp_fn = '/vsimem/%s.vrt'%tempfile._RandomNameSequence().next()
             self._dataset = gdal.GetDriverByName('VRT').CreateCopy(tmp_fn,tmp_ds)
-            self._gt = self.GetGeoTransform()
+            self.gt = self.GetGeoTransform()
 
-        self._x_size=self.RasterXSize
-        self._y_size=self.RasterYSize
-        self._nbands=self.RasterCount
-        self._bands=range(self.RasterCount)
-        self._data_type=self.GetRasterBand(1).DataType
-        self._srs=self.GetProjectionRef()
-        self._block_size=self.GetRasterBand(1).GetBlockSize()
-        self._nodata=[b.GetNoDataValue() for b in self]
-        
+        self.x_size=self.RasterXSize
+        self.y_size=self.RasterYSize
+        self.nbands=self.RasterCount
+        self.bands=range(self.RasterCount)
+        self.data_type=self.GetRasterBand(1).DataType
+        self.srs=self.GetProjectionRef()
+        self.block_size=self.GetRasterBand(1).GetBlockSize()
+        self.nodata=[b.GetNoDataValue() for b in self]
+
         self.extent=self.__get_extent__()
 
     def __del__(self):
@@ -598,13 +599,13 @@ class Dataset(RasterLike):
     def set_nodata_value(self, val):
         '''Set NoData value for all bands'''
         nodata=[]
-        for i in self._bands:
+        for i in self.bands:
             #try:
                 self._dataset.GetRasterBand(i+1).SetNoDataValue(val)
                 nodata.append(val)
             #except TypeError:pass
         if nodata:
-            self._nodata=nodata
+            self.nodata=nodata
 
     #CamelCase synonym
     SetNoDataValue=set_nodata_value
@@ -625,8 +626,8 @@ class ClippedDataset(Dataset):
             orig_ds=dataset_or_band._dataset
 
         #Basic info
-        bands=dataset_or_band._bands
-        gt = dataset_or_band._gt
+        bands=dataset_or_band.bands
+        gt = dataset_or_band.gt
         xoff,yoff,clip_xsize,clip_ysize=self._extent_to_offsets(extent,gt)
         #ulx,uly=geometry.PixelToMap(xoff,yoff,gt)
         ulx,uly=extent[0],extent[3]
@@ -815,7 +816,7 @@ class ConvertedDataset(Dataset):
         vrtbandkeys=getnodes(vrttree, gdal.CXT_Element, 'VRTRasterBand')
         for key in reversed(vrtbandkeys): del vrttree[key]#Reverse so we can delete from the end
                                                           #Don't assume bands are the last elements...
-        for i,band in enumerate(dataset_or_band._bands):
+        for i,band in enumerate(dataset_or_band.bands):
             node=getnodes(vrtbandnodes[band], gdal.CXT_Attribute, 'dataType')[0]
             try:vrtbandnodes[band][node][2][1]=gdal.GetDataTypeName(datatype)
             except TypeError:vrtbandnodes[band][node][2][1]=datatype
@@ -831,7 +832,7 @@ class ConvertedDataset(Dataset):
             warpbandnodes=getnodes(vrttree[wo][bl], gdal.CXT_Element, 'BandMapping',False)
             warpbandkeys=getnodes(vrttree[wo][bl], gdal.CXT_Element, 'BandMapping')
             for key in reversed(warpbandkeys): del vrttree[wo][bl][key]#Reverse so we can delete from the end
-            for i,band in enumerate(dataset_or_band._bands):
+            for i,band in enumerate(dataset_or_band.bands):
                 src=getnodes(warpbandnodes[band], gdal.CXT_Attribute, 'src')[0]
                 dst=getnodes(warpbandnodes[band], gdal.CXT_Attribute, 'dst')[0]
                 warpbandnodes[band][src][2][1]=str(band+1)
@@ -863,13 +864,13 @@ class NewDataset(Dataset):
         gdal.UseExceptions()
 
         if prototype_ds is not None:
-            if cols is None:cols=prototype_ds._x_size
-            if rows is None:rows=prototype_ds._y_size
-            if bands is None:bands=prototype_ds._nbands
-            if datatype is None:datatype=prototype_ds._data_type
-            if not srs:srs=prototype_ds._srs
-            if not gt:gt=prototype_ds._gt
-            if nodata==[]:nodata=prototype_ds._nodata
+            if cols is None:cols=prototype_ds.x_size
+            if rows is None:rows=prototype_ds.y_size
+            if bands is None:bands=prototype_ds.nbands
+            if datatype is None:datatype=prototype_ds.data_type
+            if not srs:srs=prototype_ds.srs
+            if not gt:gt=prototype_ds.gt
+            if nodata==[]:nodata=prototype_ds.nodata
         else:
             if cols is None:raise TypeError('Expected "cols" or "prototype_ds", got None')
             if rows is None:raise TypeError('Expected "rows" or "prototype_ds", got None')
@@ -929,12 +930,15 @@ class TemporaryDataset(NewDataset):
     save=NewDataset.create_copy #synonym for backwards compatibility
 
     def __del__(self):
-        self._dataset=None
-        del self._dataset
-        try:os.close(self._filedescriptor)
-        except:pass
-        try:self._driver.Delete(self._filename)
-        except:pass
+        try:
+            self._dataset=None
+            del self._dataset
+            if self._filedescriptor != -1:
+                os.close(self._filedescriptor)
+            self._driver.Delete(self._filename)
+        except:
+            pass
+
 
 class WarpedDataset(Dataset):
 
@@ -978,7 +982,7 @@ class WarpedDataset(Dataset):
         vrt.append('<VRTDataset rasterXSize="%s" rasterYSize="%s">' % (warped_ds.RasterXSize,warped_ds.RasterYSize))
         vrt.append('<SRS>%s</SRS>' % warped_ds.GetProjection())
         vrt.append('<GeoTransform>%s</GeoTransform>' % ', '.join(map(str,warped_ds.GetGeoTransform())))
-        for i,band in enumerate(dataset_or_band._bands):
+        for i,band in enumerate(dataset_or_band.bands):
             rb=warped_ds.GetRasterBand(band+1) #gdal band index start at 1
             nodata=rb.GetNoDataValue()
             vrt.append('  <VRTRasterBand dataType="%s" band="%s">' % (gdal.GetDataTypeName(rb.DataType), i+1))
@@ -1015,18 +1019,18 @@ class WarpedDataset(Dataset):
         warp_ext=geometry.GeoTransformToExtent(warp_gt,warp_cols,warp_rows)
         warp_ext=[warp_ext[1][0],warp_ext[1][1],warp_ext[3][0],warp_ext[3][1]]
 
-        snap_gt=list(snap_ds._gt)
+        snap_gt=list(snap_ds.gt)
         if snap_cellsize:
             snap_px,snap_py=snap_cellsize
             snap_gt[1]=snap_px
             snap_gt[5]=-snap_px
-            snap_cols = int(snap_ds._gt[1]/snap_px*snap_ds._x_size)
-            snap_rows = int(abs(snap_ds._gt[5])/snap_py*snap_ds._y_size)
+            snap_cols = int(snap_ds.gt[1]/snap_px*snap_ds.x_size)
+            snap_rows = int(abs(snap_ds.gt[5])/snap_py*snap_ds.y_size)
         else:
             snap_px=snap_gt[1]
             snap_py=abs(snap_gt[5])
-            snap_cols = snap_ds._x_size
-            snap_rows = snap_ds._y_size
+            snap_cols = snap_ds.x_size
+            snap_rows = snap_ds.y_size
         snap_ext=geometry.GeoTransformToExtent(snap_gt,snap_cols,snap_rows)
         snap_ext=[snap_ext[1][0],snap_ext[1][1],snap_ext[3][0],snap_ext[3][1]]
 
@@ -1101,9 +1105,9 @@ class ArrayDataset(TemporaryDataset):
             rows,cols,bands=array.shape
 
         if prototype_ds:
-            if not gt:gt=prototype_ds._gt
-            if not srs:srs=prototype_ds._srs
-            if not nodata:nodata=prototype_ds._nodata
+            if not gt:gt=prototype_ds.gt
+            if not srs:srs=prototype_ds.srs
+            if not nodata:nodata=prototype_ds.nodata
 
         if extent:
             xmin,ymin,xmax,ymax=extent
@@ -1170,6 +1174,16 @@ class DatasetStack(Dataset):
         del self._dataset
         try:gdal.Unlink(self._filename)
         except:pass
+
+@contextmanager
+def WriteableNamedTemporaryFile(*args, **kwargs):
+    with tempfile.NamedTemporaryFile(delete=False, *args, **kwargs) as f:
+        name = f.name
+    try:
+        yield name
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
 
 if __name__=='__main__':
     #Examples
