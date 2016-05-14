@@ -1,3 +1,5 @@
+This project is not maintained. 
+
 <a id="top"></a>
 This package enables simple tiled (or untiled if desired) raster calculations 
 (AKA "map algebra") from the commandline or from within your python scripts.  
